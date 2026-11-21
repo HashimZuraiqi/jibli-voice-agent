@@ -1,0 +1,33 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+credentials*.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+build/
+.next/
+
+# Audio recordings (may contain voices; keep out of git)
+*.wav
+*.mp3
+*.m4a
+*.ogg
+*.webm
+recordings/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.log
