@@ -13,9 +13,10 @@ Careem's services are mocked with local JSON data.
 ## Stack
 
 - Python 3.12 venv in `.venv` (`python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt`).
-- LLM: OpenRouter free models via the `openai` SDK (`OPENROUTER_API_KEY` in `.env`, never in code).
-  Free tier = 50 requests/day per account; each chat turn uses ~3–5 (agent + Mem0 fact extraction).
-- Memory: **Mem0** (`mem0ai`), LLM = OpenRouter, embedder = **FastEmbed** local multilingual
+- LLM: **Claude on Amazon Bedrock** (Converse API via `boto3`, `global.anthropic.claude-sonnet-5-5`, us-east-1).
+  Credentials come from the environment / default chain, never code; the event's expire hourly, so paste new ones
+  into `.env` and the next call reloads them. Fallback: `LLM_PROVIDER=openrouter` (free tier, 50 requests/day).
+- Memory: **Mem0** (`mem0ai`), LLM = Bedrock Haiku (or OpenRouter), embedder = **FastEmbed** local multilingual
   (`paraphrase-multilingual-MiniLM-L12-v2`, 384 dims), vector store = local Qdrant in `state/`.
 - Bandit: **MABWiser** LinUCB. Uplift: **CausalML** `BaseTClassifier` (control group named `"control"`).
 - Web: FastAPI + one static HTML page.
@@ -53,7 +54,7 @@ reorder gaps per item category (`data/catalog.json` `default_gap_days`).
 ## Layout
 
 ```
-agent/llm.py            OpenRouter client, model fallback, retries
+agent/llm.py            Bedrock Converse client (OpenRouter fallback), same OpenAI-style return shape
 agent/tools.py          mocked Careem tools (catalog, usual basket, cart, confirm, place order)
 agent/memory.py         Mem0 wrapper + sensitive-data filter
 agent/personalization/  repurchase, bandit, uplift, guardrails, layer

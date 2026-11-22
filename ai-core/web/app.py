@@ -54,7 +54,7 @@ async def quota(_, e):
 
 @app.exception_handler(RuntimeError)
 async def llm_failed(_, e):  # all models failed (bad key, provider down): show it on the page
-    return JSONResponse({"error": f"LLM unavailable: {str(e)[:300]}. Check OPENROUTER_API_KEY in .env."}, status_code=502)
+    return JSONResponse({"error": f"LLM unavailable: {str(e)[:300]}. Check the AWS credentials (or OPENROUTER_API_KEY) in .env."}, status_code=502)
 
 
 class Msg(BaseModel):

@@ -1,4 +1,4 @@
-"""Long-term user memory with Mem0 (OpenRouter LLM for fact extraction, local multilingual embeddings, local Qdrant)."""
+"""Long-term user memory with Mem0 (Bedrock or OpenRouter LLM for fact extraction, local multilingual embeddings, local Qdrant)."""
 import logging
 import os
 
@@ -25,13 +25,22 @@ class UserMemory:
     def __init__(self, state_dir, models):
         self.infer = os.getenv("MEM0_INFER", "true").lower() == "true"
         self.mem = Memory.from_config({
-            "llm": {"provider": "openai", "config": {"model": models[0], "models": models, "temperature": 0}},
+            "llm": self.llm_config(models),
             "embedder": {"provider": "fastembed",
                          "config": {"model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"}},
             "vector_store": {"provider": "qdrant", "config": {"path": str(state_dir / "qdrant"), "collection_name": "users",
                                                               "embedding_model_dims": 384, "on_disk": True}},
             "history_db_path": str(state_dir / "mem0_history.db"),
         })
+
+    @staticmethod
+    def llm_config(models):
+        if os.getenv("LLM_PROVIDER", "bedrock").lower() == "openrouter":
+            return {"provider": "openai", "config": {"model": models[0], "models": models, "temperature": 0}}
+        # fact extraction is a small job: Haiku on Bedrock, credentials from the environment
+        return {"provider": "aws_bedrock", "config": {
+            "model": os.getenv("BEDROCK_MEMORY_MODEL", "global.anthropic.claude-haiku-5-5"), "temperature": 0,
+            "max_tokens": 1024, "aws_region": os.getenv("AWS_REGION", "us-east-1")}}
 
     def seed(self, user_id):
         if not self.all(user_id):

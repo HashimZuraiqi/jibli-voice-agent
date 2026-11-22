@@ -9,7 +9,7 @@ Careem's services are mocked with local data. Design notes: `CLAUDE.md`.
 
 ```bash
 python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt
-cp .env.example .env                       # put your OpenRouter key in .env
+cp .env.example .env                       # paste the AWS export values from link.careem.com/htjordan
 .venv/bin/python data/generate.py          # mock data relative to today (run again on demo day)
 .venv/bin/python -m uvicorn web.app:app --port 8000
 # open http://127.0.0.1:8000
@@ -31,6 +31,8 @@ The first start downloads the multilingual embedding model (~220 MB, once).
 6. **Hajjeh Fatima** (new user) — cold start: no history, suggestions from similar users, and uplift gives her an offer.
 
 ## Quota
+
+Default LLM is Claude on Bedrock (team account, $300 cap, credentials expire hourly). The notes below apply only to `LLM_PROVIDER=openrouter`.
 
 The OpenRouter free tier is **50 requests per day per account**. One chat message uses about 2–5 calls
 (the agent's tool rounds + Mem0 fact extraction). Set `MEM0_INFER=false` in `.env` to save calls, or add $10 credit
