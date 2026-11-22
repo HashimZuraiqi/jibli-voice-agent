@@ -8,7 +8,12 @@ How it works:
 - Its arguments are filled from values seen in earlier calls (cart id, lat/lng, address id, ...), so the LLM can't
   invent them.
 
+- lat/lng are filled in on every call whose schema asks for them: from user_info (saved address) when seen,
+  else CAREEM_LAT / CAREEM_LNG.
+- A basket whose total can't be read is never checked out on the user's own yes: the family member approves it.
+
 Settings (.env): CAREEM_PROVIDER=mcp, CAREEM_MCP_URL, CAREEM_MCP_TOKEN (sent as Bearer), CAREEM_MCP_TRANSPORT=http|sse.
+Uses the MCP Python SDK 2.x (mcp.Client).
 - Local sandbox (fake Dubai data, never orders): CAREEM_MCP_URL=http://127.0.0.1:8787/mcp, no token.
 - Production (REAL account, REAL orders and money): CAREEM_MCP_URL=https://mcp.careemapis.com/mcp, token from
   scripts/careem_login.py (OAuth PKCE with the hackathon client id).
@@ -33,12 +38,14 @@ DEFAULT_ALLOWED = ("user_info,get_activities,track_activity,is_grocery_area_serv
                    "create_grocery_cart_with_quantities,cart_get_quik_basket,cart_get_basket_price,cart_get_checkout_promos")
 # checkout argument -> keys from earlier answers that hold its value (normalized: lowercase, no _ or -)
 ALIASES = {"totalprice": ("totalprice", "total", "baskettotal", "grandtotal")}
+LAT_KEYS, LNG_KEYS = ("lat", "latitude"), ("lng", "lon", "long", "longitude")
 
 
 class MCPConnector:
     """Minimal sync wrapper around the MCP Python SDK: one short connection per call (simple and robust for a demo)."""
 
     def __init__(self, url=None, token=None, transport=None):
+        """url: the server URL (default CAREEM_MCP_URL), or an in-process MCP server object in tests."""
         self.url = url or os.getenv("CAREEM_MCP_URL", "")
         if not self.url:
             raise RuntimeError("CAREEM_MCP_URL is not set")
@@ -59,35 +66,38 @@ class MCPConnector:
                 token = os.getenv("CAREEM_MCP_TOKEN", "")
         return {"Authorization": f"Bearer {token}"} if token else {}
 
-    async def _session(self, fn):
-        from mcp import ClientSession
+    def transport_for_url(self):
+        if not isinstance(self.url, str):  # in-process server (tests)
+            return self.url
         if self.transport == "sse":
-            from mcp.client.sse import sse_client as client
-        else:
-            from mcp.client.streamable_http import streamablehttp_client as client
-        async with client(self.url, headers=self.headers) as streams:
-            async with ClientSession(streams[0], streams[1]) as s:
-                await s.initialize()
-                return await fn(s)
+            from mcp.client.sse import sse_client
+            return sse_client(self.url, headers=self.headers)
+        from mcp.client.streamable_http import create_mcp_http_client, streamable_http_client
+        return streamable_http_client(self.url, http_client=create_mcp_http_client(headers=self.headers))
+
+    async def _session(self, fn):
+        from mcp import Client
+        async with Client(self.transport_for_url()) as c:
+            return await fn(c)
 
     def list_tools(self):
-        async def go(s):
-            return [{"name": t.name, "description": t.description or "", "inputSchema": t.inputSchema or {"type": "object"}}
-                    for t in (await s.list_tools()).tools]
+        async def go(c):
+            return [{"name": t.name, "description": t.description or "", "inputSchema": t.input_schema or {"type": "object"}}
+                    for t in (await c.list_tools()).tools]
         return asyncio.run(self._session(go))
 
     def call(self, name, args):
-        async def go(s):
-            r = await s.call_tool(name, args)
-            if getattr(r, "structuredContent", None):
-                out = r.structuredContent
+        async def go(c):
+            r = await c.call_tool(name, args)
+            if getattr(r, "structured_content", None):
+                out = r.structured_content
             else:
-                text = "\n".join(c.text for c in r.content if getattr(c, "type", "") == "text")
+                text = "\n".join(getattr(b, "text", "") for b in (r.content or []) if getattr(b, "type", "") == "text")
                 try:
                     out = json.loads(text)
                 except json.JSONDecodeError:
                     out = {"text": text}
-            if getattr(r, "isError", False):
+            if getattr(r, "is_error", False):
                 return {"error": out}
             return out
         return asyncio.run(self._session(go))
@@ -131,6 +141,18 @@ class CareemMCPTools:
     def st(self, uid):
         return self.store.state.setdefault("mcp", {}).setdefault(uid, {"seen": {}, "basket": None, "done": {}})
 
+    def with_location(self, uid, schema, args):
+        """Fill lat/lng into args when the schema has them and they are missing: saved address first, else env."""
+        props = (schema or {}).get("properties") or {}
+        seen = {norm_key(k): v for k, v in self.st(uid)["seen"].items()}
+        defaults = (float(os.getenv("CAREEM_LAT", "31.9539")), float(os.getenv("CAREEM_LNG", "35.9106")))  # Amman
+        args = dict(args)
+        for keys, default in zip((LAT_KEYS, LNG_KEYS), defaults):
+            prop = next((p for p in props if norm_key(p) in keys), None)
+            if prop and args.get(prop) in (None, ""):
+                args[prop] = next((seen[k] for k in keys if seen.get(k) not in (None, "")), default)
+        return args
+
     def schemas(self):
         out = [{"type": "function", "function": {"name": n, "description": t["description"][:1000],
                                                  "parameters": t["inputSchema"] or {"type": "object", "properties": {}}}}
@@ -158,6 +180,7 @@ class CareemMCPTools:
             return self.place_order(ctx, **args)
         if name not in self.remote:
             return {"error": f"tool {name} is not available to this agent"}
+        args = self.with_location(uid, self.remote[name]["inputSchema"], args)
         try:
             result = self.mcp.call(name, args)
         except Exception as e:
@@ -217,6 +240,8 @@ class CareemMCPTools:
         total = self.total(st["basket"])
         if total is not None and total > g.SPEND_CAP_JOD:
             return False, f"total {total} JOD is over the {g.SPEND_CAP_JOD} JOD cap"
+        if total is None and by == self.store.users[uid]["name"]:
+            return False, "the basket total is unknown; the family member must approve it in their app"
         if by == self.store.users[uid]["name"]:
             if turn is not None and pending.get("turn") == turn:
                 return False, "the user must say yes in their next message"
@@ -247,6 +272,7 @@ class CareemMCPTools:
 
     def checkout_args(self, uid):
         schema = self.checkout_tool["inputSchema"] or {}
+        filled = self.with_location(uid, schema, {})
         seen = {norm_key(k): v for k, v in self.st(uid)["seen"].items()}
         basket = {norm_key(k): v for k, v in flatten(self.st(uid)["basket"] or {}).items()}
         args, missing = {}, []
@@ -256,6 +282,8 @@ class CareemMCPTools:
             v = next((basket[a] for a in ALIASES.get(key, ()) if a in basket), None)
             if v is None and key not in ALIASES:
                 v = seen.get(key)
+            if v is None:
+                v = filled.get(prop)  # lat/lng: saved address or CAREEM_LAT / CAREEM_LNG
             if v is not None:
                 args[prop] = v
             elif prop in schema.get("required", []):

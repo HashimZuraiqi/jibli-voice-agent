@@ -45,6 +45,15 @@ class UserMemory:
                                                               "embedding_model_dims": 384, "on_disk": True}},
             "history_db_path": str(state_dir / "mem0_history.db"),
         })
+        self.drop_temperature(self.mem.llm)
+
+    @staticmethod
+    def drop_temperature(llm):
+        """Claude 5.5 models reject `temperature` with a 400, and Mem0's Bedrock adapter always sends it
+        (mem0ai 2.2.1). Strip it from the Converse inferenceConfig for Anthropic models."""
+        if getattr(llm, "provider", None) == "anthropic" and hasattr(llm, "_build_inference_config"):
+            build = llm._build_inference_config
+            llm._build_inference_config = lambda: {k: v for k, v in build().items() if k != "temperature"}
 
     @staticmethod
     def llm_config(models):
