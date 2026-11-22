@@ -53,7 +53,7 @@ class UserMemory:
             return {"provider": "openai", "config": {"model": models[0], "temperature": 0}}
         # fact extraction is a small job: Haiku on Bedrock, credentials from the environment
         return {"provider": "aws_bedrock", "config": {
-            "model": os.getenv("BEDROCK_MEMORY_MODEL", "global.anthropic.claude-haiku-5-5"), "temperature": 0,
+            "model": os.getenv("BEDROCK_MEMORY_MODEL", "global.anthropic.claude-haiku-5-5"),  # no temperature: Claude 5.5 rejects it
             "max_tokens": 1024, "aws_region": os.getenv("AWS_REGION", "us-east-1")}}
 
     def seed(self, user_id):

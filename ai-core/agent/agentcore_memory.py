@@ -16,11 +16,34 @@ import os
 import uuid
 from pathlib import Path
 
-from .personalization.guardrails import safe_to_remember
+from .personalization.guardrails import safe_to_remember, says_yes, tokens
 
 ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 NAMESPACES = ("/users/{uid}/facts/", "/users/{uid}/preferences/")
 EXPIRED = {"ExpiredTokenException", "ExpiredToken", "UnrecognizedClientException", "InvalidSignatureException"}
+
+
+QUESTION_WORDS = {"شو", "ليش", "كيف", "وين", "متى", "قديش", "قداش", "مين", "هل", "ايش", "what", "why", "how", "where",
+                  "when", "who", "which", "do", "does", "can", "is", "are"}
+# order requests and memory commands are not facts about the user (AgentCore still sees them as events)
+COMMAND_WORDS = {"ابعتلي", "ابعثلي", "جيبلي", "اطلبلي", "زيدلي", "ضيفلي", "شيل", "انسى", "امسح", "احذف",
+                 "send", "order", "add", "remove", "forget", "delete", "cancel"}
+
+
+QUESTION_WORDS = {t for w in QUESTION_WORDS for t in tokens(w)}  # same normalization as the message (ى -> ي ...)
+COMMAND_WORDS = {t for w in COMMAND_WORDS for t in tokens(w)}
+NO_START = {t for w in ("لا", "لاء", "مش", "بلاش", "no", "nope", "not", "dont", "later") for t in tokens(w)}
+
+
+def looks_like_fact(text):
+    """Only statements become instant records: not yes/no answers, questions, commands or very short replies.
+    E.g. «جوزي ما بوكل سكر» yes; «اه يا ريت», «شو بتعرف عني؟», «ابعتلي خبز» no."""
+    toks = tokens(text)
+    if len(toks) < 3 or says_yes(text) or text.strip().endswith(("?", "؟")):
+        return False
+    if toks[0] in QUESTION_WORDS or toks[0] in COMMAND_WORDS or toks[0] in NO_START:
+        return False  # «لا مش هلق» is an answer; «جوزي ما بوكل سكر» (no word later on) is a fact
+    return True
 
 
 def fact_text(record):
@@ -108,7 +131,7 @@ class AgentCoreMemory:
             now = dt.datetime.now(dt.timezone.utc)
             self.call("create_event", actorId=user_id, sessionId=f"{user_id}-{now:%Y%m%d}", eventTimestamp=now,
                       payload=[{"conversational": {"content": {"text": text}, "role": "USER"}}])
-            if self.instant:
+            if self.instant and looks_like_fact(text):
                 self._write(user_id, [text])
             return True, "ok"
         except Exception as e:  # a failed memory write must not break the conversation

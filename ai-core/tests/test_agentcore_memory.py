@@ -146,3 +146,19 @@ def test_preference_records_show_the_preference_not_json():
     fake.records["mem-f"] = {"ns": "/users/um_khaled/facts/", "text": "{not json"}
     assert sorted(m["fact"] for m in mem.all("um_khaled")) == ["Husband does not eat sugar", "{not json"]
     assert mem.recall("um_khaled", "cooking")[0]["fact"] == "Husband does not eat sugar"
+
+
+def test_only_statements_become_instant_facts():
+    from agent.agentcore_memory import looks_like_fact
+    for fact in ("جوزي ما بوكل سكر", "ابني خالد هو اللي بدفع", "بفضل الخبز الصغير مش الكبير", "My husband takes no sugar"):
+        assert looks_like_fact(fact), fact
+    for filler in ("اه يا ريت", "شو بتعرف عني؟", "ابعتلي خبز وحليب وبيض", "لا مش هلق", "تمام", "انسى موضوع السكر",
+                   "what do you know about me"):
+        assert not looks_like_fact(filler), filler
+
+
+def test_filler_goes_to_agentcore_but_not_the_panel():
+    mem, fake = make()
+    assert mem.learn("um_khaled", "اه يا ريت") == (True, "ok")
+    assert fake.events == [("um_khaled", "اه يا ريت")]  # AgentCore still sees it and extracts what it wants
+    assert mem.all("um_khaled") == []
