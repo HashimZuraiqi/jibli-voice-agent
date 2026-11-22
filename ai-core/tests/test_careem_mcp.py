@@ -215,3 +215,30 @@ def test_sandbox_note_only_on_local_sandbox(monkeypatch):
     assert "fixed test basket" in sandbox_note()
     monkeypatch.setenv("CAREEM_MCP_URL", "https://mcp.careemapis.com/mcp")
     assert sandbox_note() == ""  # production: the agent must still point out real differences
+
+
+def test_her_yes_or_khaled_whoever_is_first(tmp_path):
+    # asked of her: Khaled's approve also works (first one wins, once)
+    store, fake, tools = setup(tmp_path)
+    build_cart(tools)
+    r = tools.run("request_confirmation", {"by": "user"}, ctx(1))
+    assert "can also approve" in r["note"]
+    assert tools.family_checkout("um_khaled", "Khaled", NOW)["status"] == "ordered"
+    assert "error" in tools.run("place_order", {"confirmed_by": "user"}, ctx(2, "اه"))  # her later yes can't order again
+    assert len(checkouts(fake)) == 1
+    # asked of her: her own yes works too
+    store, fake, tools = setup(tmp_path / "b")
+    build_cart(tools)
+    tools.run("request_confirmation", {"by": "user"}, ctx(1))
+    assert tools.run("place_order", {"confirmed_by": "user"}, ctx(2, "اه"))["status"] == "ordered"
+    assert tools.family_checkout("um_khaled", "Khaled", NOW)["status"] == "blocked"  # nothing pending any more
+    assert len(checkouts(fake)) == 1
+
+
+def test_asked_of_khaled_only_khaled(tmp_path):
+    store, fake, tools = setup(tmp_path)
+    build_cart(tools)
+    tools.run("request_confirmation", {"by": "Khaled"}, ctx(1))
+    assert "BLOCKED" in tools.run("place_order", {"confirmed_by": "user"}, ctx(2, "اه"))["error"]
+    assert tools.family_checkout("um_khaled", "Abu Khaled", NOW)["status"] == "blocked"  # not allowed to confirm
+    assert tools.family_checkout("um_khaled", "Khaled", NOW)["status"] == "ordered"

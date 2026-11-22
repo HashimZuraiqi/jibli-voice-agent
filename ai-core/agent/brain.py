@@ -24,13 +24,16 @@ def sandbox_note():
 # how to confirm depends on the Careem path: careem.py (mcp-all) proposes the exact checkout; careem_mcp.py (mcp)
 # and the mocks only take who confirms, and the checkout is built from the priced basket by the gate
 CONFIRM_ALL = ("- Nothing is ordered or booked until it is confirmed: call request_confirmation with the exact checkout_tool, "
-               "checkout_args, total and a one-line summary, by the user or by the family member who usually confirms; then stop "
-               "and wait. Only call place_order when the user has just said yes. Never retry a failed checkout on your own; tell "
+               "checkout_args, total and a one-line summary; then stop and wait. Ask the user herself (by='user') by default: then "
+               "she can say yes, or the family member who usually confirms can approve in their app, whoever is first. Ask only "
+               "the family member when the user asks for that or a tool says the family must approve. Only call place_order when the user has just said yes. Never retry a failed checkout on your own; tell "
                "the user what went wrong.")
 CONFIRM_GROCERY = ("- Nothing is ordered until it is confirmed: get the basket price first, then call request_confirmation and stop "
-                   "and wait. Ask the user herself (by='user') by default; ask the family member who usually confirms only when the "
-                   "user asks for that or a tool says the family must approve. Only call place_order when the user has just said "
-                   "yes; a family member approves in their own app. Never retry a failed checkout on your own.")
+                   "and wait. Ask the user herself (by='user') by default: then she can say yes, or the family member who "
+                   "usually confirms can approve in their app, whoever is first (say this in a few words). Ask only the family "
+                   "member (by=<their name>) when the user asks for that or a tool says the family must approve. Only call "
+                   "place_order when the user has just said yes; a family member approves in their own app. Never retry a "
+                   "failed checkout on your own.")
 
 
 def prompt(file, **kw):

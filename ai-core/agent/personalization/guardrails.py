@@ -67,6 +67,15 @@ def allowed_confirmers(store, user_id):
     return [u["name"]] + [f["name"] for f in u["family"] if f.get("can_confirm")]
 
 
+def may_answer(store, user_id, pending, confirmed_by):
+    """Who may answer a pending confirmation. Asked of the user herself: she OR any family member allowed to confirm
+    (whoever says yes first; the order is still placed once). Asked of a family member (she asked for it, or a guardrail
+    requires it): only that family member."""
+    if pending["by"] == confirmed_by:
+        return True
+    return pending["by"] == store.users[user_id]["name"] and confirmed_by in allowed_confirmers(store, user_id)
+
+
 def can_place_order(store, user_id, confirmed_by, user_text=None):
     pending = store.state["pending"].get(user_id)
     if not pending and not store.cart(user_id):
@@ -94,7 +103,7 @@ def can_place_order(store, user_id, confirmed_by, user_text=None):
         return False, f"{confirmed_by} is not allowed to confirm orders for this user"
     if not pending:
         return False, "ask for confirmation first (request_confirmation), then wait for the answer"
-    if pending["by"] != confirmed_by:
+    if not may_answer(store, user_id, pending, confirmed_by):
         return False, f"confirmation was requested from {pending['by']}, not {confirmed_by}"
     if not careem and pending.get("cart") != cart:
         return False, "the cart changed after confirmation was requested; ask again"

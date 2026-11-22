@@ -268,14 +268,19 @@ class CareemMCPTools:
         self.store.log(uid, "confirmation_requested", ctx["now"], by=by)
         self.store.save()
         return {"status": "waiting", "by": by, "basket": basket,
-                "note": "ask the user to say yes to confirm" if by == name
+                "note": f"ask the user to say yes to confirm; {self.family_confirmer(uid)} can also approve it in their app, "
+                        "whoever is first" if by == name
                 else "tell the user it is waiting for confirmation; do not place the order yet"}
+
+    def family_confirmer(self, uid):
+        u = self.store.users[uid]
+        return u.get("confirm_by") or next((f["name"] for f in u["family"] if f.get("can_confirm")), "the family")
 
     def check(self, uid, by, user_text=None, turn=None):
         st, pending = self.st(uid), self.store.state["pending"].get(uid)
         if not pending:
             return False, "ask for confirmation first (request_confirmation), then wait for the answer"
-        if pending["by"] != by:
+        if not g.may_answer(self.store, uid, pending, by):
             return False, f"confirmation was requested from {pending['by']}, not {by}"
         if not st["basket"] or self.fingerprint(st["basket"]) != pending["basket"]:
             return False, "the cart changed after confirmation was requested; ask again"
