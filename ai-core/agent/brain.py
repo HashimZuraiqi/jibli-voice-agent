@@ -5,7 +5,7 @@ from pathlib import Path
 from .personalization import guardrails as g
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
-MAX_TOOL_ROUNDS = 6
+MAX_TOOL_ROUNDS = 12  # a Careem grocery journey is ~6+ chained calls (agent playbook)
 
 
 def prompt(file, **kw):
