@@ -85,12 +85,27 @@ function play(r) {
   if (r.audio_b64) { new Audio(`data:${r.audio_mime};base64,${r.audio_b64}`).play().catch(() => browserSay(r.reply)); }
   else browserSay(r.reply);
 }
-function browserSay(text) {  // fallback: the browser's own Arabic voice
+// The browser's own voice. Best: Microsoft Edge's online natural Jordanian voices (ar-JO, e.g. "Sana" / "Taim").
+// ?voice=Taim in the URL picks a voice by name.
+function bestArabicVoice() {
+  const all = speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith("ar"));
+  const want = new URLSearchParams(location.search).get("voice");
+  const score = v => (want && v.name.toLowerCase().includes(want.toLowerCase()) ? 100 : 0)
+    + (v.lang.toLowerCase() === "ar-jo" ? 40 : 0)
+    + (/natural|online|neural/i.test(v.name) ? 20 : 0)
+    + (["ar-sy", "ar-lb", "ar-ps"].includes(v.lang.toLowerCase()) ? 10 : 0);  // other Levantine voices
+  return all.sort((a, b) => score(b) - score(a))[0];
+}
+function browserSay(text) {
   if (!("speechSynthesis" in window) || !text) return;
-  const u = new SpeechSynthesisUtterance(text); u.lang = "ar-SA"; u.rate = 0.95;
-  const v = speechSynthesis.getVoices().find(v => v.lang.startsWith("ar")); if (v) u.voice = v;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text); u.rate = 0.95;
+  const v = bestArabicVoice(); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = "ar-JO";
   speechSynthesis.speak(u);
 }
+if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => {
+  const v = bestArabicVoice(); if (v) console.log("[voice] speaking with", v.name, v.lang);
+};
 
 function setBusy(b, label) { busy = b; $("mic").disabled = b; $("status").textContent = label || "اضغطي واحكي"; }
 
