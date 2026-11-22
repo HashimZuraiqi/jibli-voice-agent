@@ -2,6 +2,8 @@
 
     .venv/bin/python scripts/tts_compare.py                 # Amazon Polly voices (needs the AWS keys in .env)
     .venv/bin/python scripts/tts_compare.py --silma         # + SILMA (pip install silma-tts, ffmpeg; first run downloads it)
+    .venv/bin/python scripts/tts_compare.py --leva          # + Leva-TTS (Levantine; start stt/leva_server.py first)
+Amazon Polly is AccessDenied for the hackathon's AWS role; use --no-polly to skip it.
 
 Writes audio files to ai-core/tts_samples/ (git-ignored) and prints seconds per sentence. Listen and pick by ear:
 does the dialect sound natural, and is it fast enough that grandma isn't waiting?
@@ -44,9 +46,20 @@ def silma():
     return say
 
 
-voices = {"polly-Hala-neural": lambda: polly("Hala", "neural", "ar-AE"),
-          "polly-Zayd-neural": lambda: polly("Zayd", "neural", "ar-AE"),
-          "polly-Zeina-standard": lambda: polly("Zeina", "standard", "arb")}
+def leva():
+    from stt.leva import tts
+
+    def say(text):
+        return tts(text), "wav"
+    return say
+
+
+voices = {} if "--no-polly" in sys.argv else {
+    "polly-Hala-neural": lambda: polly("Hala", "neural", "ar-AE"),
+    "polly-Zayd-neural": lambda: polly("Zayd", "neural", "ar-AE"),
+    "polly-Zeina-standard": lambda: polly("Zeina", "standard", "arb")}
+if "--leva" in sys.argv:
+    voices["leva"] = leva
 if "--silma" in sys.argv:
     voices["silma"] = silma
 

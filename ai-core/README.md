@@ -42,7 +42,10 @@ Memory runs on Amazon Bedrock AgentCore Memory. Backup: `MEMORY_PROVIDER=mem0` i
   `TTS_FUNC=stt.anas:tts` (`tts(text) -> audio_bytes`). Without them: local Whisper (`pip install openai-whisper`
   + ffmpeg) and the browser's own Arabic voice. **Open the voice page in Microsoft Edge**: it has online natural
   Jordanian voices (ar-JO), which the page prefers; `?voice=Taim` picks one by name. Amazon Polly is blocked for the
-  event's AWS role (AccessDenied), so don't use `TTS_PROVIDER=polly` there. The recording is never stored.
+  event's AWS role (AccessDenied), so don't use `TTS_PROVIDER=polly` there.
+- Levantine voice option: **Leva-TTS** runs as its own small server in a separate venv (`stt/leva_server.py`, setup in
+  its header), then `TTS_PROVIDER=func`, `TTS_FUNC=stt.leva:tts`. Weights are non-commercial: demo only. If the
+  server is down, the page falls back to the browser voice. The recording is never stored.
 - The phone must reach the laptop: use the laptop's LAN IP (`--host 0.0.0.0`). Browsers only allow the mic on
   http://localhost or https, so run the elder page on the laptop itself.
 
