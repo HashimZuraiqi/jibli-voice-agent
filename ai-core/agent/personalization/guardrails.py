@@ -78,7 +78,9 @@ def can_place_order(store, user_id, confirmed_by, user_text=None):
         if not cart["lines"]:
             return False, "the cart is empty"
         total, currency = cart["total_jod"], "JOD"
-    cap = SPEND_CAPS.get(currency, SPEND_CAPS["AED"])
+    if currency not in SPEND_CAPS:  # fail closed: an unknown currency has no cap we can check
+        return False, f"unknown currency {currency!r}; a family member must confirm in the app"
+    cap = SPEND_CAPS[currency]
     if total > cap:
         return False, f"total {total} {currency} is over the {cap} {currency} cap; a family member must confirm in the app"
     if confirmed_by not in allowed_confirmers(store, user_id):
