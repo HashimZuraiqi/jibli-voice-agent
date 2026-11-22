@@ -77,3 +77,12 @@ def test_prompt_cache_turns_itself_off_when_refused():
     msg, _ = llm.chat([{"role": "system", "content": "be kind"}, {"role": "user", "content": "hi"}])
     assert msg.content == "هلا" and llm.cache is False
     assert all("cachePoint" not in b for b in fake.seen[1]["system"])
+
+
+def test_missing_credentials_become_a_clear_error(monkeypatch):
+    from botocore.exceptions import NoCredentialsError
+    import pytest
+    llm = BedrockLLM(client=Fake([NoCredentialsError(), NoCredentialsError()]))
+    monkeypatch.setattr(llm, "client", lambda fresh=False: llm._client)
+    with pytest.raises(RuntimeError, match="No AWS credentials"):
+        llm.chat([{"role": "user", "content": "hi"}])
