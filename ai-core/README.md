@@ -31,6 +31,34 @@ Memory runs on Amazon Bedrock AgentCore Memory. Backup: `MEMORY_PROVIDER=mem0` i
 5. Set *Time* to 23:00 and send a reminder → blocked by quiet hours. Send two reminders at 10:00 → the second is blocked.
 6. **Hajjeh Fatima** (new user) — cold start: no history, suggestions from similar users, and uplift gives her an offer.
 
+## Demo app: Jibli inside the Careem app (`/app/<user>`)
+
+One URL holds all 9 demo screens in an iPhone-sized frame (full screen on a real phone), Arabic first with
+English subtitles, dark mode and reduced motion respected. Every personalization number comes live from
+`/api/state` and `/api/why`.
+
+| Device | URL | What it shows |
+|---|---|---|
+| Laptop on the projector (Edge or Chrome) | `http://127.0.0.1:8000/app/um_khaled` | Um Khaled's phone: the whole flow |
+| Faris's phone (same Wi-Fi, or a second browser window) | `http://<laptop-ip>:8000/app/um_khaled#family` | Khaled's phone: approve / decline |
+
+Start the app with `--host 0.0.0.0` when a real phone opens it. The old pages still work: `/voice/<user>`, `/family/<user>`.
+
+Screens (jump with the hidden demo bar: press **D**, or tap the status bar clock 3 times; or add `#home`, `#why`, … to the URL):
+1. **Lock screen** `#lock`: the real reminder (`POST /api/reminder`); tap the notification and it expands into Jibli.
+2. **Careem home** `#home`: service tiles plus the Jibli card with due rings for what is running out.
+3. **Jibli voice** `#voice`: mic, waveform, live transcript, spoken reply, basket with Careem's price and نعم / لا.
+4. **"Why this?"** `#why`: learn (purchase timeline), predict (due score rings), decide (bandit style scores, uplift offer), speak (the exact sentence).
+5. **What Jibli knows about me** `#memory`: forget one fact or everything.
+6. **Who confirms my orders?** `#settings`: me / me or Khaled (default) / Khaled must approve; limits read-only.
+   Saved by `POST /api/settings/<user>`; it changes only the confirm wording the agent gets, never the gate.
+7. **Khaled's phone** `#family`: the approval push card.
+8. **Order confirmed, then tracking** `#track`: a demo simulation of about 20 seconds (labelled on screen).
+9. **Jibli learned** `#learned`: the next reminder from the live model, and 👍 / 👎 as the bandit's reward.
+
+Rehearsal (about 90 s): notification → «اه يا ريت» → basket → "Why this?" (15 s) → set "me or Khaled" → Khaled
+approves → tracking → "Jibli learned".
+
 ## Voice page and family page (demo)
 
 - **Elder:** http://127.0.0.1:8000/voice/um_khaled — one big mic button (tap to talk, tap to stop), the reply is
