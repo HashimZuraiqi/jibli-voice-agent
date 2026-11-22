@@ -99,3 +99,11 @@ state/                  runtime state (Mem0/Qdrant, bandit pickle, carts); git-i
 - Spend cap per currency (`SPEND_CAPS`: 50 JOD, 259 AED, about 50 JOD each). The sandbox world is Dubai / AED; production in Amman is JOD.
 - Confirmation asked of the user: she OR an allowed family member can confirm, whoever is first (`guardrails.may_answer`); asked of a family member: only them.
 - With `CAREEM_PROVIDER=mcp-all`, start the sandbox before the app: `.venv/bin/python careem-mcp-sandbox/careem_mcp.py start`.
+
+## Consent (agent/consent.py)
+
+- When an order waits for the user's answer, `consent.judge` decides yes / no / unclear: clear yes words at once
+  (Arabic, English, Arabizi), otherwise Claude reads the meaning (order and reply passed as quoted data).
+- Yes → the brain places the order through the guardrails; unclear → ask once more; clear no → cancel it.
+- Never a yes: a question, or a reply with a no/wait word, a condition (but, change, بس، غير) or a question word,
+  whatever the LLM says. LLM down → ask again. The yes must come within 2 of her messages and 30 minutes.

@@ -21,6 +21,8 @@ This file keeps the explanations and the numbers behind each chart. Full text of
 
 *Chart — "Her monthly Box delivery is overdue: 41 days since the last, usual gap 28":* deliveries Home → Work by car on 14 Sep and 13 Oct. From 0.9 × 28 ≈ 25 days after the last one (7 Nov) the delivery counts as due; on 24 Nov it is day 41, so the reminder offers it again.
 
+*Chart — "Lina, the new demo customer, has 10 weekly ride habits Jibli can predict":* Home → Work by Go at 08:00 every weekday (Sunday–Thursday), Work → Gym at 17:00 and Gym → Home at 19:00 on Monday and Wednesday, Home → Dubai Mall by Comfort on Thursday at 21:00, and no rides on Friday and Saturday, so no suggestion then. Lina pays and confirms her own orders. On the real Careem account rides are switched off until Careem adds them to its sandbox.
+
 ## 3. Bandit: how the reminder is worded
 
 **A real machine-learning model that learns online** (LinUCB, the method Yahoo used for news and Netflix for artwork). For every reminder it guesses which of 4 styles this person is most likely to answer "yes" to at this moment, sends that one, and updates itself from the reply (yes = 1, no or silence = 0).
@@ -53,6 +55,22 @@ For Um Khaled the family style leads clearly; for Abu Sami three styles are almo
 
 *Chart — "An offer pays off only for people who order less than about 5 times a month":* keeping everything else fixed (basket 10, price-sensitive 0.7, 10 days since the last order), the uplift is +28 points at 0 orders a month, +7 at 4, and below the 5-point line from about 5 orders a month on.
 
+## 5. Consent: did she say yes?
+
+**The newest model, an AI judge.** When an order or ride is waiting for the user's answer, Jibli decides what her reply means. Clear yes words count at once; anything else is read by Claude together with the order, so any sentence that means yes places it, in Jordanian, other dialects, formal Arabic, English or Arabizi.
+
+*Diagram:* her reply (within 2 messages and 30 minutes) → a question? (never a yes: ask once more) → a clear yes word? (place the order, no AI call) → Claude reads it: YES (place the order), NO (cancel it), UNCLEAR (ask once more). A YES on a reply with a no, condition or question word also goes to "ask once more".
+
+*Chart — "Every test reply judged right: 26 of 26, 18 of them by Claude reading the meaning"* (live test, Claude Sonnet 5.5 on Bedrock):
+
+| Outcome | Decided by word rules | Decided by Claude | Right |
+| --- | --- | --- | --- |
+| Yes: order placed | 7 | 7 | 14 of 14 |
+| Unclear: asks again | 1 | 7 | 8 of 8 |
+| No: order cancelled | 0 | 4 | 4 of 4 |
+
+Half of the yeses were plain words like اه or aywa; the other half ("على بركة الله", "روح جيبلي ياه", "I'm in, go for it", "ma3loom, ib3atho") needed Claude to understand the meaning. Every no and every unclear reply was caught, so nothing was ordered by mistake.
+
 ## How the numbers were made
 
 Every chart was computed by running Jibli's own code on its demo data on 22 Nov 2026, with "now" set to Tuesday 24 Nov 2026 at 09:10; nothing was typed by hand.
@@ -63,5 +81,7 @@ Every chart was computed by running Jibli's own code on its demo data on 22 Nov 
 | Tuesday rides, Box deliveries | `services.usual_ride`, `services.usual_box` | `data/services.json` (40 rides, 7 Box deliveries) |
 | Style scores, learning curve | `ReminderBandit.choose`, then `update(…, "no")` 18 times on a copy | Bandit prior from `data/bandit_logs.json` (3,000 synthetic replies) |
 | Uplift per user, uplift by frequency | `OfferModel.model.predict(…, return_components=True)` | Model trained on `data/uplift_logs.json` (20,000 synthetic rows) |
+| Lina's week of rides | `services.usual_ride` at each weekday and hour | `data/services.json` (100 rides for Lina) |
+| Consent live test | `consent.judge` with Claude Sonnet 5.5 on Bedrock | 26 test replies written for the test (not real users) |
 
 All data is invented for the demo, so the charts show **how each model behaves**, not facts about real Careem users.
