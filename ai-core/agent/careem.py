@@ -323,9 +323,12 @@ class CareemTools:
 
     def _ride(self, p):
         q = self.store.state.get("ride_quotes", {}).get(p["args"]["quote_id"])
-        price = next(x["price_aed"] for x in q["quotes"] if x["product"] == p["args"]["product"])
+        x = next(x for x in q["quotes"] if x["product"] == p["args"]["product"])
+        # the price and currency that were quoted and confirmed (JOD in the Amman world); reporting price_aed here made
+        # the agent warn Faris that the price "changed" to ~49 dirhams after he agreed to 9.45 JOD
         return {"ride_id": "ride_" + uuid.uuid4().hex[:6], "status": "captain_assigned", "captain": "Ahmed K.",
-                "eta_min": 5, "product": p["args"]["product"], "from": q["pickup"], "to": q["dropoff"], "price_aed": price}
+                "eta_min": 5, "product": p["args"]["product"], "from": q["pickup"], "to": q["dropoff"],
+                "price": x.get("price", x["price_aed"]), "currency": x.get("currency", "AED")}
 
     def t_memory_list(self, ctx):
         return {"facts": self.memory.all(ctx["user_id"])}

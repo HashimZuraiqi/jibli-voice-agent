@@ -359,3 +359,16 @@ def test_faris_usual_ride_reminder_then_one_yes_books_it(tools, monkeypatch):
     placed = [s for s in out["steps"] if s.get("tool") == "place_order"]
     assert placed and placed[0]["result"]["status"] == "ordered" and "faris" not in tools.store.state["pending"]
     assert sum(o["user_id"] == "faris" for o in tools.store.state.get("service_orders", [])) == 1
+
+
+def test_ride_booking_reports_the_confirmed_price_and_currency(tools, monkeypatch):
+    """Live run: Faris agreed to 9.45 JOD, the booking answered price_aed 48.97 and the agent told him the price changed."""
+    monkeypatch.setenv("SANDBOX_WORLD", "amman")
+    q = tools.run("rides_get_quote", {"pickup": "Work", "dropoff": "Gym", "product": "Go"}, ctx(1))
+    go = q["quotes"][0]
+    assert go["currency"] == "JOD"
+    tools.run("request_confirmation", {"by": "user", "checkout_tool": "rides_request", "total": go["price"], "currency": "JOD",
+                                       "summary": "Go Work -> Gym", "checkout_args": {"quote_id": q["quote_id"], "product": "Go"}},
+              ctx(1))
+    ride = tools._ride(tools.store.state["pending"][ctx(1)["user_id"]])
+    assert (ride["price"], ride["currency"]) == (go["price"], "JOD") and "price_aed" not in ride
