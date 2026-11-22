@@ -98,3 +98,13 @@ def test_voice_config_tells_the_page_how_to_listen(client, monkeypatch):
     assert r.status_code == 503  # audio isn't sent in browser mode
     monkeypatch.setenv("STT_PROVIDER", "whisper")
     assert client.get("/api/voice-config").json()["stt"] == "server"
+
+
+def test_progress_shows_what_jibli_is_doing(client):
+    assert client.get("/api/progress/um_khaled").json()["text"] == "لحظة…"
+    client.app_module.S["brain"].progress("um_khaled", "tool", name="search_groceries_items",
+                                          args={"search_terms": ["خبز", "حليب"]})
+    p = client.get("/api/progress/um_khaled").json()
+    assert "خبز" in p["text"] and "حليب" in p["text"] and p["n"] >= 1
+    client.app_module.S["brain"].progress("um_khaled", "tool", name="cart_get_basket_price")
+    assert "المجموع" in client.get("/api/progress/um_khaled").json()["text"]

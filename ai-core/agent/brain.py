@@ -49,7 +49,8 @@ CONFIRM_ALL = ("- Nothing is ordered or booked until it is confirmed: call reque
                "sent to (e.g. food sent to Khaled) is not the one who confirms it. When the user says yes the system places the "
                "order. Never retry a failed checkout on your own; tell the user what went wrong.")
 CONFIRM_GROCERY = ("- Nothing is ordered until it is confirmed: get the basket price first, then call request_confirmation and stop "
-                   "and wait. Ask the user herself (by='user') by default: then she can say yes, or the family member who "
+                   "and wait. When you ask, read back in one short sentence the items with quantities, the total with "
+                   "delivery, and the delivery address (the saved place's name from user_info, e.g. the Home address). Ask the user herself (by='user') by default: then she can say yes, or the family member who "
                    "usually confirms can approve in their app, whoever is first (say this in a few words). Ask only the family "
                    "member (by=<their name>) when the user asks for that or a tool says the family must approve. Only call "
                    "place_order when the user has just said yes; a family member approves in their own app. Never retry a "
@@ -83,6 +84,12 @@ class Brain:
         self.store, self.memory, self.layer, self.tools, self.llm = store, memory, layer, tools, llm
         self.history = {}  # short-term memory: this session's messages per user
         self.turns = {}  # messages per user, so "her next message" is about her, not anyone else's
+        self.live = {}  # user_id -> what the agent is doing right now, for the "عم بدوّر…" status on the voice page
+
+    def progress(self, user_id, key, **detail):
+        """Live status while a reply is being built (read by /api/progress). Never affects the answer."""
+        n = self.live.get(user_id, {}).get("n", 0) + 1
+        self.live[user_id] = {"key": key, "detail": detail, "n": n, "t": time.monotonic()}
 
     def family_text(self, u):
         return "; ".join(f"{f['name']} ({f['relation']}{', pays' if f.get('pays') else ''}"
@@ -147,6 +154,7 @@ class Brain:
         turn = self.turns[user_id] = self.turns.get(user_id, 0) + 1
         start = time.monotonic()
         steps = [{"step": "1 hear", "text": text}]
+        self.progress(user_id, "remember")
         self.memory.seed(user_id)
 
         t0 = time.monotonic()
@@ -172,11 +180,14 @@ class Brain:
             and now - parse_ts(pending["ts"]) <= YES_WITHIN_TIME
         if pending and pending.get("by") == self.store.users[user_id]["name"] and fresh:
             # Claude reads what the reply MEANS for the waiting order (any wording, Arabic, English or Arabizi)
+            self.progress(user_id, "consent")
             verdict = consent.judge(self.llm, text, pending.get("summary") or "the order")
             steps.append({"step": "6 consent", "verdict": verdict})
             if verdict == "yes":
+                self.progress(user_id, "tool", name="place_order")
                 # place it now, still through every guardrail; the guardrail's own word check gets a plain "yes"
                 # because consent.judge already decided it, and judge never says yes when the reply has a no word
+                self.progress(user_id, "tool", name="place_order")
                 result = self.tools.run("place_order", {"confirmed_by": "user"},
                                         {"user_id": user_id, "now": now, "text": "yes", "turn": turn})
                 steps.append({"step": "6 confirm", "tool": "place_order", "args": {"confirmed_by": "user", "auto": True},
@@ -202,7 +213,8 @@ class Brain:
         convo = [{"role": "system", "content": self.system(user_id, now, facts, advice) + self.setup_notes() + note}] + msgs[-12:]
         ctx = {"user_id": user_id, "now": now, "text": text, "turn": turn}
         reply = ""
-        for _ in range(MAX_TOOL_ROUNDS):
+        for round_no in range(MAX_TOOL_ROUNDS):
+            self.progress(user_id, "think", round=round_no)
             t0 = time.monotonic()
             msg, meta = self.llm.chat(convo, self.tools.schemas())
             calls = msg.tool_calls or []
@@ -218,6 +230,7 @@ class Brain:
                 t0 = time.monotonic()
                 try:
                     args = json.loads(c.function.arguments or "{}")
+                    self.progress(user_id, "tool", name=c.function.name, args=args if isinstance(args, dict) else {})
                     result = self.tools.run(c.function.name, args, ctx)
                 except json.JSONDecodeError:
                     args, result = None, {"error": "arguments were not valid JSON"}
@@ -227,6 +240,7 @@ class Brain:
         else:
             reply = "عذراً، صار في مشكلة. رح أحاول مرة ثانية." if self.store.users[user_id]["lang"] != "en" else "Sorry, something went wrong."
         msgs.append({"role": "assistant", "content": reply})
+        self.progress(user_id, "reply")
 
         ok, why = g.safe_to_remember(text)  # local check, instant
         if ok:  # the AgentCore / Mem0 write happens after the reply goes out, so the user doesn't wait for it

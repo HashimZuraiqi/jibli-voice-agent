@@ -1,4 +1,4 @@
-# Jibli — voice ordering agent: LLM brain + personalization layer
+# Jibli (جيبلي) — voice ordering agent: LLM brain + personalization layer
 
 Older users in Jordan order Careem Quik groceries by voice note; a family member confirms. This part is the **brain**
 (LLM + tools) and the **personalization layer** (memory, repurchase prediction, bandit, uplift offers, guardrails).
