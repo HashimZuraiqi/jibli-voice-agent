@@ -83,3 +83,9 @@ def test_family_view_shows_what_is_waiting(client):
         "price": {"total": 45.5}, "currency": "AED"}}
     v = client.get("/api/family-view/um_khaled").json()
     assert not v["asked_user"] and v["total"] == 45.5 and v["items"][0]["name"] == "Sourdough Loaf"
+
+
+def test_family_view_gives_arabic_names(client):
+    """Live run: the pages said "بنستنى Khaled يوافق" and spoke "وافق Khaled"; names are stored in English."""
+    v = client.get("/api/family-view/um_khaled").json()
+    assert v["names"]["Khaled"] == "خالد" and v["names"]["Um Khaled"] == "أم خالد" and v["confirmer"] == "Khaled"

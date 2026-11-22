@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>جيبلي · موافقة العيلة</title>
+<link rel="icon" href="data:,">
 <style>
   :root { --green:#1a8f4c; --green-d:#136b39; --soft:#e8f5ee; --red:#b3261e; --ink:#1b1b1b; --muted:#5f6b63; }
   * { box-sizing:border-box; }
@@ -39,7 +40,8 @@
 const USER = decodeURIComponent(location.pathname.split("/").filter(Boolean).pop());
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const money = (v, cur) => v == null ? "—" : `${Number(v).toFixed(2).replace(/\.00$/, "")} ${cur || ""}`;
+const money = (v, cur) => v == null ? "—" : `${Number(v).toFixed(2).replace(/\.00$/, "")} ${cur === "AED" ? "درهم" : cur === "JOD" ? "دينار" : (cur || "")}`;
+const nm = (v, n) => (v && v.names && v.names[n]) || n || "";  // Arabic name (stored names are English)
 let acting = false, result = null, lastWaiting = null;
 
 function tick() { const n = new Date();
@@ -68,9 +70,9 @@ function render(v) {
   } else {
     const last = v.last;
     let lastLine = "";
-    if (last && last.kind === "careem_order") lastLine = `آخر طلب: وافق ${esc(last.by)} · ${esc(last.ts.replace("T", " "))}`;
+    if (last && last.kind === "careem_order") lastLine = `آخر طلب: وافق ${esc(nm(v, last.by))} · ${esc(last.ts.replace("T", " "))}`;
     else if (last && last.kind === "confirmation_declined") lastLine = `آخر طلب انرفض · ${esc(last.ts.replace("T", " "))}`;
-    else if (last && last.confirmed_by) lastLine = `آخر طلب: وافق ${esc(last.confirmed_by)} · ${esc(String(last.ts).replace("T", " "))}`;
+    else if (last && last.confirmed_by) lastLine = `آخر طلب: وافق ${esc(nm(v, last.confirmed_by))} · ${esc(String(last.ts).replace("T", " "))}`;
     $("card").innerHTML = `${header(v)}<div class="idle">ما في طلبات بتستنى موافقتك 👌${lastLine ? `<br><small>${lastLine}</small>` : ""}</div>`;
   }
 }

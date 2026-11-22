@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>جيبلي</title>
+<link rel="icon" href="data:,">
 <style>
   :root { --green:#1a8f4c; --green-d:#136b39; --soft:#e8f5ee; --red:#b3261e; --ink:#1b1b1b; --muted:#5f6b63; --amber:#fff4dc; }
   * { box-sizing:border-box; }
@@ -29,6 +30,7 @@
   .hint { text-align:center; color:var(--muted); font-size:16px; margin-top:8px; }
   .wait { background:var(--soft); }
   .done { background:var(--soft); text-align:center; font-size:22px; }
+  .declined { background:var(--amber); text-align:center; font-size:22px; }
   .mic-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; margin:10px 0 6px; }
   .mic { width:170px; height:170px; border-radius:50%; border:0; background:var(--green); color:#fff; cursor:pointer;
          box-shadow:0 0 0 14px var(--soft), 0 6px 18px #0003; display:flex; align-items:center; justify-content:center; }
@@ -73,7 +75,9 @@ const USER = decodeURIComponent(location.pathname.split("/").filter(Boolean).pop
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const money = (v, cur) => v == null ? "" : `${Number(v).toFixed(2).replace(/\.00$/, "")} ${cur === "AED" ? "درهم" : cur === "JOD" ? "دينار" : (cur || "")}`;
-let lastReply = null, busy = false, lastView = null;
+let lastReply = null, busy = false, lastView = null, wasWaiting = false;
+const nm = (v, n) => (v && v.names && v.names[n]) || n || "";  // Arabic name (stored names are English)
+const DONE = `<div class="card done">✅ طلبك بالطريق</div>`;
 
 function add(cls, text) { const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = text;
   $("log").appendChild(d); $("log").scrollTop = 1e9; }
@@ -98,9 +102,16 @@ async function handle(promise, shownText) {
   setBusy(true, "لحظة…");
   try {
     const res = await promise; const r = await res.json();
+    if (res.status === 503) throw new Error("الصوت مش شغّال هلق، اكتبي طلبك تحت.");
+    if (res.status === 422) throw new Error("ما سمعت شي، جرّبي كمان مرة.");
     if (!res.ok) throw new Error(r.detail || r.error || res.statusText);
     if (r.transcript && !shownText) add("me", r.transcript);
-    add("bot", r.reply); play(r); render(r.waiting);
+    add("bot", r.reply); play(r);
+    const v = r.waiting;
+    // her own yes placed it: the reply already said so; show the card, and don't let poll() announce it again
+    if (wasWaiting && v && !v.waiting && v.last && v.last.kind === "careem_order") { lastView = v; $("cards").innerHTML = DONE; }
+    else render(v);
+    if (v) wasWaiting = v.waiting;
   } catch (e) { add("note err", "⚠️ " + e.message); }
   finally { setBusy(false); }
 }
@@ -140,26 +151,29 @@ function render(v) {
       <div class="total"><span>المجموع</span><span>${esc(money(v.total, v.currency))}</span></div>
       <div class="yn"><button class="yes" id="yes">نعم<small>اطلب هلق</small></button>
                       <button class="no" id="no">لا<small>بدي أغيّر</small></button></div>
-      <div class="hint">أو قولي «آه» أو «لا»${v.confirmer ? ` · أو ${esc(v.confirmer)} بيقدر يوافق من تلفونه` : ""}</div></div>`;
+      <div class="hint">أو قولي «آه» أو «لا»${v.confirmer ? ` · أو ${esc(nm(v, v.confirmer))} بيقدر يوافق من تلفونه` : ""}</div></div>`;
     $("yes").onclick = () => !busy && say("اه");
     $("no").onclick = () => !busy && say("لا");
   } else if (v.waiting) {
-    $("cards").innerHTML = `<div class="card wait"><h2>⏳ بنستنى ${esc(v.asked)} يوافق</h2>${items}
+    $("cards").innerHTML = `<div class="card wait"><h2>⏳ بنستنى ${esc(nm(v, v.asked))} يوافق</h2>${items}
       <div class="total"><span>المجموع</span><span>${esc(money(v.total, v.currency))}</span></div></div>`;
   } else if (!$("cards").querySelector(".done")) $("cards").innerHTML = "";  // keep "on its way" until the next order
 }
 
 // the family can approve from their phone at any moment: keep the card fresh
-let wasWaiting = false;
 async function poll() {
+  if (busy) return;  // a reply is on its way; it updates the card itself
   try {
     const v = await (await fetch(`/api/family-view/${encodeURIComponent(USER)}`)).json();
-    if (wasWaiting && !v.waiting && !busy && v.last && v.last.kind !== "confirmation_declined") {
-      const by = v.last.by || v.last.confirmed_by || "";
-      const msg = `تمام، الطلب انبعت${by ? ` (وافق ${by})` : ""}. بيوصلك قريب.`;
+    if (busy) return;
+    if (wasWaiting && !v.waiting && v.last) {  // the family answered from their phone
+      const by = nm(v, v.last.by || v.last.confirmed_by);
+      const declined = v.last.kind === "confirmation_declined";
+      const msg = declined ? `${by || "العيلة"} ما وافق على الطلب، فما انطلب شي. بدك نغيّر إشي؟`
+                           : `تمام، ${by ? `${by} وافق و` : ""}الطلب انبعت. بيوصلك قريب.`;
       add("bot", msg); browserSay(msg);
-      $("cards").innerHTML = `<div class="card done">✅ طلبك بالطريق</div>`;
-    } else if (!busy) render(v);
+      $("cards").innerHTML = declined ? `<div class="card declined">❌ ما انطلب شي</div>` : DONE;
+    } else render(v);
     wasWaiting = v.waiting;
   } catch (e) {}
 }

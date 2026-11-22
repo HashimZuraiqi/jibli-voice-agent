@@ -239,8 +239,10 @@ def family_view(user_id: str):
     check_user(user_id)
     st, u = S["store"], S["store"].users[user_id]
     p = st.state["pending"].get(user_id)
+    # Arabic names for the pages (confirm_by, pending "by", last order "by" are stored in English)
+    names = {u["name"]: u.get("name_ar", u["name"]), **{f["name"]: f.get("name_ar", f["name"]) for f in u.get("family", [])}}
     view = {"user": {"name": u["name"], "name_ar": u.get("name_ar", u["name"])}, "confirmer": u.get("confirm_by"),
-            "waiting": False}
+            "names": names, "waiting": False}
     if p:
         cart = p.get("cart")
         if p.get("tool"):  # mcp-all: careem.py stored the exact checkout
