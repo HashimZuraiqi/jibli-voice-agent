@@ -21,7 +21,8 @@ The layer is plain Python in `ai-core/agent/personalization/`; memory sits next 
 | `services.py` | Predicts the usual ride at this time and the usual Careem Box delivery | `usual_ride`, `usual_box` |
 | `bandit.py` | Picks the reminder style and learns from replies (LinUCB, MABWiser) | `ReminderBandit.choose`, `update`, `context_vector` |
 | `uplift.py` | Decides whether an offer is worth giving (T-learner, CausalML) | `OfferModel.uplift`, `features` |
-| `guardrails.py` | Safety rules checked before anything is said or done | `can_remind`, `can_offer`, `can_place_order`, `says_yes`, `safe_to_remember` |
+| `guardrails.py` | Safety rules checked before anything is said or done; the fast yes / no word check | `can_remind`, `can_offer`, `can_place_order`, `says_yes`, `says_no`, `safe_to_remember` |
+| `agent/consent.py` | Decides what the user's reply **means** for the waiting order: yes, no or unclear | `judge` |
 | `agent/memory.py` | What the agent remembers about each user (Mem0 or AgentCore Memory) | `recall`, `learn`, `all`, `forget` |
 
 ## Predict groceries: what is running out
@@ -46,7 +47,8 @@ Example: Um Khaled buys milk about every 3.5 days; 7 days after her last carton 
 | Counts as a habit when | The same trip (from, to, product) happened **3+ times** | Always the most repeated trip (from, to, vehicle, category) |
 | "Due" when | It is the right weekday and hour | Days since the last one ≥ 0.9 × the median gap |
 | Gives the brain | from, to, product (Go, Comfort, Business), times seen, place ids and coordinates | from, to, vehicle (motorbike, car, van), category, days since, gap, due |
-| Example | Um Khaled, Tuesday 09:10: Home → Dubai Mall by Comfort, seen 10 times | Um Khaled: Home → Work by car, about every 28 days, 41 days ago: due |
+| Example: Um Khaled (68) | Tuesday 09:10: Home → Dubai Mall by Comfort, seen 10 times | Home → Work by car, about every 28 days, 41 days ago: due |
+| Example: Lina (22, new demo customer) | Weekday 08:00: Home → Work by Go; Mon and Wed 17:00: Work → Gym; Thursday 21:00: Home → Dubai Mall by Comfort; Saturday: none | No Box habit |
 
 Places are the saved places of the Careem account (Home, Work, Gym, Dubai Mall, Airport T3), so the brain can quote and book them directly.
 
@@ -89,12 +91,30 @@ Places are the saved places of the Careem account (Home, Work, Gym, Dubai Mall, 
 | --- | --- |
 | No reminders 22:00–08:00, at most 1 per day | The reminder is blocked and the reason is shown |
 | At most 1 offer per 7 days | The offer is withheld even if the uplift is high |
-| Nothing is paid without a confirmation request first | The checkout waits until the user or the family member who pays says yes |
-| Only the user or a family member allowed to confirm, and only the one who was asked | Um Khaled's husband cannot confirm; Khaled can, in his own app only |
-| The user's own yes must be short, clear and have no "no" in it | "اه اطلبه" counts; "مش تمام" and "لا، اطلبه بعدين" do not |
-| Spend cap per order: 30 JOD or 150 AED | Above it, the family member must approve; the price always comes from Careem, never from the AI |
+| Nothing is paid without a confirmation request first | Jibli says the price and asks; the order waits for an answer |
+| The user herself is asked by default | The family member who pays is asked only when she wants that or the spend cap requires it; whoever answers first decides. The person an order is sent to (e.g. food sent to Khaled) is not the one who confirms it |
+| The user's yes is judged by meaning (next section) | Any kind of yes places the order; unclear → ask once more; a clear no → the waiting order is cancelled |
+| The yes must be recent | Within her next 2 messages and 30 minutes of the question; later, Jibli asks again |
+| Spend cap per order: 30 JOD or 150 AED | Above it, the family member must approve; the price always comes from Careem's own quote or basket, never from the AI |
 | Unknown currency or a price that is not a real number | Refused |
+| Real Careem server | `CAREEM_ALLOW_CHECKOUT` is off by default: Jibli builds the real cart and price but never pays; the ride stand-in is switched off; addresses come from the user's own Careem account. The local sandbox places its pretend orders |
 | No sensitive data in memory | ID and card numbers, passwords and health words are never stored |
+
+## How Jibli knows the user said yes
+
+`agent/consent.py` reads the user's reply together with the order that is waiting, so any sentence that **means** yes places it, in Jordanian Arabic, other dialects, formal Arabic, English or Arabizi (Arabic in Latin letters).
+
+1. **Clear yes words count at once**, with no AI call: اه، اكيد، تمام، كمّل، اعتمد، توكل، اطلبه، yes, sure, go ahead, aywa, akeed, 5alas, and "no problem" phrases (ما في مشكلة، ما عندي مانع; ليش لا / why not as the whole reply).
+2. **Anything else is read by Claude**, which answers YES, NO or UNCLEAR. The order summary and the reply are passed to it as quoted data, never as instructions.
+3. **Yes** → the code places the order itself through every guardrail, and the AI only tells her how it went. **Unclear** → Jibli asks once: "بدك أكمّل الطلب؟". **No** → the waiting order is cancelled.
+
+| Reply | Decision |
+| --- | --- |
+| اه اكيد كمل الطلب، على بركة الله، روح جيبلي ياه، حسناً أكمل الطلب، I'm in go for it، aywa yalla | Yes: order placed |
+| خلص مش لازم، لا بطلت، cancel it please، la2 msh hala2 | No: order cancelled |
+| طيب بشوف، ماشي بس بعدين، maybe later، اه بس غير الوقت، قديش السعر؟ | Unclear: asks again |
+
+Safety: a question is never a yes. A reply with a no or wait word (لا، مش، بعدين، cancel…), a condition (بس، غير، شيل، but, change…) or a question word (شو، كم، how…) can never become a yes, even if the AI reads it that way. If the AI cannot be reached, Jibli asks again instead of guessing. In a live test Claude judged 26 of 26 replies correctly.
 
 ## Memory
 
@@ -123,13 +143,15 @@ On every message `layer.advise(user, now)` returns one piece of advice that goes
 
 ## Tests, limits and next steps
 
-**Tests.** `.venv/bin/python -m pytest -q` checks the layer without any AI: running-out items, cold start, offers only where they change behavior, the bandit learning from replies, reminder and offer limits, the confirmation rules, the spend cap, Arabic yes/no, the sensitive-data filter, and the usual ride and Box predictions.
+**Tests.** `.venv/bin/python -m pytest -q` runs 100 tests without any AI: running-out items, cold start, offers only where they change behavior, the bandit learning from replies, reminder and offer limits, the confirmation rules, the spend cap, the yes / no / unclear decision (with a fake AI for the meaning part), the sensitive-data filter, the usual ride and Box predictions, and the real-Careem switches (no paying, no ride stand-in).
 
 **Limits.**
 
 - The bandit and the offer model learn from synthetic data for the demo; their numbers show the method, not real behavior.
 - The same reminder style can repeat day after day; people tune that out.
 - Ride and Box habits are simple counts on the history; there is no seasonality yet.
+- Reading the meaning of a yes costs one AI call (about 1 second) when the reply has no clear yes word; if the AI is down, only clear yes words work.
+- Rides are a local stand-in until Careem adds rides to its sandbox, so they are switched off on the real Careem account.
 
 **Next steps:**
 
