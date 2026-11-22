@@ -89,3 +89,12 @@ def test_family_view_gives_arabic_names(client):
     """Live run: the pages said "بنستنى Khaled يوافق" and spoke "وافق Khaled"; names are stored in English."""
     v = client.get("/api/family-view/um_khaled").json()
     assert v["names"]["Khaled"] == "خالد" and v["names"]["Um Khaled"] == "أم خالد" and v["confirmer"] == "Khaled"
+
+
+def test_voice_config_tells_the_page_how_to_listen(client, monkeypatch):
+    monkeypatch.setenv("STT_PROVIDER", "browser")
+    assert client.get("/api/voice-config").json()["stt"] == "browser"
+    r = client.post("/api/voice?user_id=um_khaled", content=b"audio", headers={"Content-Type": "audio/webm"})
+    assert r.status_code == 503  # audio isn't sent in browser mode
+    monkeypatch.setenv("STT_PROVIDER", "whisper")
+    assert client.get("/api/voice-config").json()["stt"] == "server"

@@ -3,6 +3,8 @@
 STT_PROVIDER  = whisper (default: local openai-whisper, WHISPER_MODEL=small, Arabic)
               | func    (STT_FUNC=module:function, e.g. stt.anas:stt -> stt(audio_bytes) -> text;
                          a second `mime` parameter is passed if the function takes one)
+              | browser (the page uses the browser's own speech recognition, Edge/Chrome, ar-JO; no install,
+                         needs internet; the words go to /api/say like typing)
               | none    (the page asks the user to type)
 TTS_PROVIDER  = browser (default: the page speaks with the browser's own Arabic voice)
               | polly   (Amazon Polly, POLLY_VOICE=Hala, neural, ar-AE; same AWS keys as Bedrock)
@@ -40,6 +42,8 @@ def transcribe(audio: bytes, mime: str = "audio/webm") -> str:
     provider = os.getenv("STT_PROVIDER", "whisper").lower()
     if not audio:
         raise NoSTT("empty recording")
+    if provider == "browser":
+        raise NoSTT("speech-to-text runs in the browser (STT_PROVIDER=browser): the page sends the words, not audio")
     if provider == "none":
         raise NoSTT("speech-to-text is off (STT_PROVIDER=none): type the message instead")
     if provider == "func":

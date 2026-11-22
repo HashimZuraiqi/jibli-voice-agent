@@ -137,8 +137,36 @@ function say(text) { add("me", text);
 
 // ---- recording: tap to start, tap again to stop
 let rec = null, chunks = [];
+// STT_PROVIDER=browser: the browser's own speech recognition (Edge / Chrome, Jordanian Arabic), no install needed.
+// The words go to the same brain as typing (/api/say). Any other provider: record and send the audio to /api/voice.
+let sttMode = "server", recog = null;
+fetch("/api/voice-config").then(r => r.json()).then(c => { sttMode = c.stt; }).catch(() => {});
+const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function browserListen() {
+  if (!Recognition) { add("note err", "⚠️ هالمتصفح ما بيدعم التعرّف على الصوت. افتحي الصفحة بـ Edge أو Chrome، أو اكتبي تحت."); return; }
+  if (recog) { recog.stop(); return; }  // second tap: stop listening
+  speechSynthesis.cancel();
+  recog = new Recognition();
+  recog.lang = new URLSearchParams(location.search).get("lang") || "ar-JO";
+  recog.interimResults = true; recog.continuous = false; recog.maxAlternatives = 1;
+  let finalText = "";
+  recog.onresult = e => {
+    const text = Array.from(e.results).map(r => r[0].transcript).join(" ");
+    $("status").textContent = text || "عم بسمعك…";
+    if (e.results[e.results.length - 1].isFinal) finalText = text;
+  };
+  recog.onerror = e => { if (e.error !== "no-speech" && e.error !== "aborted") add("note err", "⚠️ المايك: " + e.error + " — جربي كمان مرة أو اكتبي تحت."); };
+  recog.onend = () => {
+    recog = null; $("mic").classList.remove("rec");
+    if (finalText.trim()) say(finalText.trim()); else setBusy(false);
+  };
+  recog.start(); $("mic").classList.add("rec"); $("status").textContent = "عم بسمعك… احكي";
+}
+
 $("mic").onclick = async () => {
   if (busy) return;
+  if (sttMode === "browser") return browserListen();
   if (rec && rec.state === "recording") { rec.stop(); return; }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({audio: true});

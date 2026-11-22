@@ -37,7 +37,8 @@ Memory runs on Amazon Bedrock AgentCore Memory. Backup: `MEMORY_PROVIDER=mem0` i
   spoken back, big نعم / لا when an order waits for her, and a text box ("speak it or type it, same agent").
 - **Family:** http://127.0.0.1:8000/family/um_khaled — open on Khaled's phone: the basket and total waiting for
   approval, وافق / رفض. When the agent asks her, she OR Khaled can confirm, whoever is first (placed once).
-- Speech: `STT_PROVIDER` / `TTS_PROVIDER` in `.env` (see `.env.example`). Anas's functions plug in without code changes:
+- Speech: `STT_PROVIDER` / `TTS_PROVIDER` in `.env` (see `.env.example`). Quickest working mic: `STT_PROVIDER=browser`
+  (Edge/Chrome speech recognition in Jordanian Arabic, no install, needs internet; `?lang=ar-SA` to change). Anas's functions plug in without code changes:
   `STT_PROVIDER=func`, `STT_FUNC=stt.anas:stt` (`stt(audio_bytes) -> text`), `TTS_PROVIDER=func`,
   `TTS_FUNC=stt.anas:tts` (`tts(text) -> audio_bytes`). Without them: local Whisper (`pip install openai-whisper`
   + ffmpeg) and the browser's own Arabic voice. **Open the voice page in Microsoft Edge**: it has online natural

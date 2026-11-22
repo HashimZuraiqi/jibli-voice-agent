@@ -185,6 +185,13 @@ def spoken(reply):
     return base64.b64encode(out[0]).decode(), out[1]
 
 
+@app.get("/api/voice-config")
+def voice_config():
+    """Tells the voice page how to listen: browser (its own speech recognition) or server (/api/voice)."""
+    return {"stt": "browser" if os.getenv("STT_PROVIDER", "whisper").lower() == "browser" else "server",
+            "tts": os.getenv("TTS_PROVIDER", "browser").lower()}
+
+
 @app.post("/api/voice")
 async def voice_message(request: Request, user_id: str, time: str | None = None):
     """Body = the recorded audio (any browser format). Audio -> STT -> brain -> TTS. The audio is never stored."""
