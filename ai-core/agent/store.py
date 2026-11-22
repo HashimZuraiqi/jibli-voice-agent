@@ -23,6 +23,7 @@ class Store:
         return {"orders": [], "carts": {}, "pending": {}, "events": []}
 
     def save(self):
+        self.state_dir.mkdir(parents=True, exist_ok=True)  # survive state/ being deleted while the server runs
         (self.state_dir / "store.json").write_text(json.dumps(self.state, ensure_ascii=False, indent=1))
 
     def orders(self, user_id):
