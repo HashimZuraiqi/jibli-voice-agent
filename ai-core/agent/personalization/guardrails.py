@@ -7,22 +7,36 @@ from ..store import parse_ts
 SPEND_CAP_JOD = 30.0
 QUIET_HOURS = (22, 8)  # no reminders from 22:00 to 08:00
 OFFER_EVERY_DAYS = 7
-YES_WORDS = {"yes", "yeah", "ok", "okay", "sure", "confirm", "نعم", "اه", "آه", "أه", "ايوا", "إيوا", "ايوه", "تمام",
-             "اطلب", "اطلبه", "اطلبها", "ماشي", "يلا", "موافق", "موافقه", "اكيد", "أكيد"}
-YES_PHRASES = ("order it", "go ahead")
-NO = re.compile(r"\b(no|not|don't|dont|cancel|later|stop)\b|(^|\s)(لا|لأ|مش|ما|بلاش|بعدين|الغي|إلغاء|الغاء|وقف)(\s|$)|ما بدي|مابدي", re.I)
+YES_WORDS = {"yes", "yeah", "ok", "okay", "sure", "confirm", "نعم", "اه", "ايوا", "ايوه", "تمام",
+             "اطلب", "اطلبه", "اطلبها", "ماشي", "يلا", "موافق", "موافقه", "اكيد"}
+YES_PHRASES = (("order", "it"), ("go", "ahead"))
+# filler that may surround a yes; anything else makes consent unclear and the agent asks again
+FILLER = {"please", "thanks", "thank", "you", "habibi", "يا", "ابني", "بنتي", "حبيبي", "حبيبتي", "يسلمو", "يسلموا",
+          "شكرا", "الله", "يخليك", "يعطيك", "العافيه", "والله", "هلا", "طيب", "خلص", "اطلبلي", "هيك", "it", "go", "ahead", "order"}
+NO_WORDS = {"no", "not", "nope", "nah", "never", "dont", "don't", "cancel", "later", "stop", "wait", "hold",
+            "لا", "لاء", "مش", "مو", "ما", "بلاش", "بعدين", "الغي", "الغاء", "وقف", "استنى", "مابدي"}
+
+
+def tokens(text):
+    """One normalization for both checks: no diacritics, one alef/hamza form, punctuation (incl. ، ؛ ؟) dropped."""
+    t = re.sub(r"[\u064B-\u0652\u0640]", "", (text or "").lower())
+    t = re.sub(r"[أإآ]", "ا", t).replace("ى", "ي").replace("لأ", "لا")
+    return re.findall(r"[a-z']+|[\u0621-\u064A]+|\d+", t)
 
 
 def says_no(text):
-    return bool(text and NO.search(text))
+    return any(w in NO_WORDS for w in tokens(text))
 
 
 def says_yes(text):
-    """Consent = a whole yes word and no negation anywhere in the message."""
-    if not text or says_no(text):
+    """Fail closed: a short reply (at most 6 words), no negation, at least one yes word, and nothing but yes words
+    and filler. Anything else is unclear, and the agent asks a clear yes/no question again."""
+    toks = tokens(text)
+    if not 0 < len(toks) <= 6 or any(w in NO_WORDS for w in toks):
         return False
-    t = text.lower()
-    return any(w in YES_WORDS for w in re.findall(r"[\w']+", t)) or any(p in t for p in YES_PHRASES)
+    pairs = set(zip(toks, toks[1:]))
+    has_yes = any(w in YES_WORDS for w in toks) or any(p in pairs for p in YES_PHRASES)
+    return has_yes and all(w in YES_WORDS or w in FILLER for w in toks)
 
 
 # sensitive details are never stored unless the user chose to share them for ordering
