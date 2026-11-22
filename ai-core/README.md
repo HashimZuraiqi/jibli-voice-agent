@@ -31,6 +31,12 @@ Memory runs on Amazon Bedrock AgentCore Memory. Backup: `MEMORY_PROVIDER=mem0` i
 5. Set *Time* to 23:00 and send a reminder → blocked by quiet hours. Send two reminders at 10:00 → the second is blocked.
 6. **Hajjeh Fatima** (new user) — cold start: no history, suggestions from similar users, and uplift gives her an offer.
 
+## Real Careem MCP
+
+Set `CAREEM_PROVIDER=mcp`, `CAREEM_MCP_URL` and `CAREEM_MCP_TOKEN` in `.env` and restart. The agent uses Careem's own
+tool list; `cart_grocery_checkout` is hidden from the LLM and only runs after a human yes (once, never retried).
+If the MCP server can't be reached at start, the app prints why and uses the mock tools.
+
 ## Quota
 
 Default LLM is Claude on Bedrock (team account, $300 cap, credentials expire hourly). The notes below apply only to `LLM_PROVIDER=openrouter`.
