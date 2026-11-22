@@ -9,10 +9,10 @@ SPEND_CAPS = {"JOD": 50.0, "AED": 259.0}  # per order, about 50 JOD each (team d
 SPEND_CAP_JOD = SPEND_CAPS["JOD"]  # careem_mcp.py converts the basket currency to JOD and checks this
 QUIET_HOURS = (22, 8)  # no reminders from 22:00 to 08:00
 OFFER_EVERY_DAYS = 7
-YES_WORDS = {"yes", "yeah", "yep", "yup", "ya", "ok", "okay", "okey", "k", "sure", "confirm", "confirmed", "alright",
-             "fine", "absolutely", "definitely", "ofc", "yalla",
+YES_WORDS = {"yes", "yeah", "yep", "yup", "ok", "okay", "okey", "sure", "confirm", "confirmed", "alright",
+             "absolutely", "definitely", "ofc", "yalla",
              "نعم", "اه", "ايوا", "ايوه", "ايه", "يس", "تمام", "ماشي", "يلا", "موافق", "موافقه", "اكيد", "طبعا", "حاضر",
-             "اوكي", "اوك", "خلص", "زبط", "مزبوط", "صح", "منيح", "عال", "اطلب", "اطلبه", "اطلبها", "اطلبلي", "اطلبيه",
+             "اوكي", "اوك", "خلص", "زبط", "مزبوط", "اطلب", "اطلبه", "اطلبها", "اطلبلي", "اطلبيه",
              "اطلبوا", "ابعت", "ابعته", "ابعتها", "ابعتلي", "بعته", "بعتها", "اكد", "اكده", "اكدها"}
 YES_PHRASES = (("order", "it"), ("go", "ahead"), ("do", "it"), ("of", "course"), ("sounds", "good"), ("please", "do"),
                ("send", "it"), ("why", "not"))
@@ -21,6 +21,9 @@ NO_PROBLEM = (("ما", "في", "مشكله"), ("مافي", "مشكله"), ("مش
               ("not", "a", "problem"))
 NO_WORDS = {"no", "not", "nope", "nah", "never", "dont", "don't", "cancel", "later", "stop", "wait", "hold",
             "لا", "لاء", "مش", "مو", "ما", "بلاش", "بعدين", "الغي", "الغاء", "وقف", "استنى", "مابدي"}
+# a question is never consent ("صح؟", "ok?", "how much?")
+QUESTION_WORDS = {"what", "why", "how", "where", "when", "which", "who", "really", "شو", "ليش", "كيف", "وين", "كم",
+                  "قديش", "ايش", "هل", "متى", "امتى", "مين"}
 # "yes, but change something" is not a yes to the order as it stands: ask again
 CONDITIONS = {"but", "except", "change", "remove", "instead", "بس", "غير", "شيل", "شيلي", "بدل", "غيرها", "غيره"}
 
@@ -53,7 +56,9 @@ def says_yes(text):
     """Any kind of yes, in any length: a yes word or phrase ("اه والله اطلبه", "sure, go ahead", "ما في مشكلة"),
     unless the message also says no / wait, or asks to change something first ("اه بس شيل الرز")."""
     toks = _drop_phrases(tokens(text), NO_PROBLEM)
-    if not toks or any(w in NO_WORDS or w in CONDITIONS for w in toks):
+    if not toks or any(w in NO_WORDS or w in CONDITIONS or w in QUESTION_WORDS for w in toks):
+        return False
+    if "?" in text or "؟" in text:
         return False
     pairs = set(zip(toks, toks[1:]))
     return "<yes>" in toks or any(w in YES_WORDS for w in toks) or any(p in pairs for p in YES_PHRASES)

@@ -1,4 +1,5 @@
 """The brain: 7 steps per user message (hear, remember, advise, think, act, confirm, learn)."""
+import datetime as dt
 import json
 import os
 import time
@@ -6,8 +7,12 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from .personalization import guardrails as g
+from .store import parse_ts
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
+# the user's yes counts for a waiting order only within her next 2 messages and 30 minutes; later, Jibli asks again
+YES_WITHIN_MESSAGES = 2
+YES_WITHIN_TIME = dt.timedelta(minutes=30)
 MAX_TOOL_ROUNDS = 12  # the real Careem chain (user_info, searches, cart, price, confirm, order) needs ~9-10
 # every LLM round is a full Bedrock call, so fewer rounds = a faster answer
 SPEED_RULE = ("\n\nSpeed: the user is waiting on a voice call. Call tools that don't depend on each other in the same turn "
@@ -76,7 +81,7 @@ class Brain:
     def __init__(self, store, memory, layer, tools, llm):
         self.store, self.memory, self.layer, self.tools, self.llm = store, memory, layer, tools, llm
         self.history = {}  # short-term memory: this session's messages per user
-        self.turn = 0
+        self.turns = {}  # messages per user, so "her next message" is about her, not anyone else's
 
     def family_text(self, u):
         return "; ".join(f"{f['name']} ({f['relation']}{', pays' if f.get('pays') else ''}"
@@ -138,7 +143,7 @@ class Brain:
         return ("\n" + "\n".join(notes)) if notes else ""
 
     def handle(self, user_id, text, now):
-        self.turn += 1
+        turn = self.turns[user_id] = self.turns.get(user_id, 0) + 1
         start = time.monotonic()
         steps = [{"step": "1 hear", "text": text}]
         self.memory.seed(user_id)
@@ -161,12 +166,13 @@ class Brain:
                             + "): build the cart or quote with the tools, get its price, then request_confirmation from the "
                             "user herself (by='user').")
         pending = self.store.state["pending"].get(user_id)
-        if pending and pending.get("by") == self.store.users[user_id]["name"] and pending.get("turn") != self.turn \
-                and g.says_yes(text):
+        fresh = pending and isinstance(pending.get("turn"), int) and 0 < turn - pending["turn"] <= YES_WITHIN_MESSAGES \
+            and now - parse_ts(pending["ts"]) <= YES_WITHIN_TIME
+        if pending and pending.get("by") == self.store.users[user_id]["name"] and fresh and g.says_yes(text):
             # any kind of yes to the order waiting for the user: place it now (still through every guardrail);
             # the AI only tells them how it went, so it cannot forget to order or ask for yet another yes
             result = self.tools.run("place_order", {"confirmed_by": "user"},
-                                    {"user_id": user_id, "now": now, "text": text, "turn": self.turn})
+                                    {"user_id": user_id, "now": now, "text": text, "turn": turn})
             steps.append({"step": "6 confirm", "tool": "place_order", "args": {"confirmed_by": "user", "auto": True},
                           "result": result})
             note += ("\nThe user just said yes, so the system already placed the order. Result: "
@@ -180,7 +186,7 @@ class Brain:
         msgs = self.history.setdefault(user_id, [])
         msgs.append({"role": "user", "content": text})
         convo = [{"role": "system", "content": self.system(user_id, now, facts, advice) + self.setup_notes() + note}] + msgs[-12:]
-        ctx = {"user_id": user_id, "now": now, "text": text, "turn": self.turn}
+        ctx = {"user_id": user_id, "now": now, "text": text, "turn": turn}
         reply = ""
         for _ in range(MAX_TOOL_ROUNDS):
             t0 = time.monotonic()

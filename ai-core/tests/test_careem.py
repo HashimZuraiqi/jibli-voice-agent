@@ -244,3 +244,35 @@ def test_users_yes_places_the_waiting_order_without_the_model(tools, monkeypatch
     out = brain.handle("um_khaled", "yep, go ahead and book it please", NOW)
     auto = [s for s in out["steps"] if s.get("tool") == "place_order"]
     assert auto and auto[0]["result"]["status"] == "ordered" and not tools.store.state["pending"]
+
+
+def test_a_late_yes_does_not_place_the_order(tools):
+    from agent.brain import Brain
+    from agent.llm import Message
+
+    class NoLLM:
+        def chat(self, messages, tools=None):
+            return Message("ok"), {"model": "test"}
+
+    class Layer:
+        def advise(self, user_id, now):
+            return {"running_out": [], "cold_start": False, "suggestions_for_new_user": [], "usual_ride": None,
+                    "usual_box": None, "style": "short", "style_hint": "", "style_scores": {}, "offer": None,
+                    "offer_decision": {}}
+
+    class Mem:
+        def seed(self, u): pass
+        def recall(self, u, t): return []
+        def learn(self, u, t): return True, "ok"
+
+    brain = Brain(tools.store, Mem(), Layer(), tools, NoLLM())
+    q = tools.run("rides_get_quote", {"pickup": "Home", "dropoff": "Work", "product": "Go"}, ctx(1))
+    tools.run("request_confirmation", {"by": "user", "checkout_tool": "rides_request", "total": q["quotes"][0]["price_aed"],
+                                       "currency": "AED", "summary": "Go", "checkout_args": {"quote_id": q["quote_id"], "product": "Go"}},
+              ctx(1))
+    brain.turns["um_khaled"] = 1
+    brain.handle("um_khaled", "صح؟", NOW)                                  # a question: no order
+    assert tools.store.state["pending"]
+    late = NOW + __import__("datetime").timedelta(hours=2)
+    out = brain.handle("um_khaled", "اه اطلبه", late)                      # too late: no order
+    assert not [s for s in out["steps"] if s.get("tool") == "place_order"] and tools.store.state["pending"]

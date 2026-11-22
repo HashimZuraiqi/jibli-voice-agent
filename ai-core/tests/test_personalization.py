@@ -148,5 +148,5 @@ def test_any_kind_of_yes_is_accepted():
     for no in ("مش تمام", "لا", "لا تطلب", "الاهم الخبز", "not yet", "no, cancel it", "ما بدي",
                "لا، اطلبه بعدين", "لأ؛ تمام", "مو هلا، اطلب", "لاء اطلبه", "تمام؟ لا", "no.ok", "ok?no",
                "ok never mind", "yes but hold on", "تمام بس استنى", "اه بس شيل الرز", "ok but remove the rice",
-               "hello", "شو السعر؟"):
+               "hello", "شو السعر؟", "صح؟", "ok?", "اه بس كم السعر", "منيح", "fine thanks", "how much is it"):
         assert not g.says_yes(no), no
