@@ -180,12 +180,14 @@ class Brain:
             and now - parse_ts(pending["ts"]) <= YES_WITHIN_TIME
         if pending and pending.get("by") == self.store.users[user_id]["name"] and fresh:
             # Claude reads what the reply MEANS for the waiting order (any wording, Arabic, English or Arabizi)
+            self.progress(user_id, "consent")
             verdict = consent.judge(self.llm, text, pending.get("summary") or "the order")
             steps.append({"step": "6 consent", "verdict": verdict})
             if verdict == "yes":
                 self.progress(user_id, "tool", name="place_order")
                 # place it now, still through every guardrail; the guardrail's own word check gets a plain "yes"
                 # because consent.judge already decided it, and judge never says yes when the reply has a no word
+                self.progress(user_id, "tool", name="place_order")
                 result = self.tools.run("place_order", {"confirmed_by": "user"},
                                         {"user_id": user_id, "now": now, "text": "yes", "turn": turn})
                 steps.append({"step": "6 confirm", "tool": "place_order", "args": {"confirmed_by": "user", "auto": True},
