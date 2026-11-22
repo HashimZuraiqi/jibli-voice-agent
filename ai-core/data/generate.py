@@ -125,6 +125,43 @@ def uplift_logs(n=20000):
     return rows
 
 
+# Saved places of the Careem test account (careem-mcp-sandbox/spec/FIXTURES.md): label -> (location id, lat, lng)
+PLACES = {"Home": ("LOC-50001", 25.0866, 55.1474), "Work": ("LOC-50002", 25.2172, 55.2826),
+          "Gym": ("LOC-50003", 25.0702, 55.1430), "Dubai Mall": ("LOC-poi-dubai-mall", 25.1972, 55.2796),
+          "Airport T3": ("LOC-poi-dxb-t3", 25.2528, 55.3644)}
+# user: rides (weekday 0=Mon, hour, from, to, product) and Box deliveries (gap days, from, to, vehicle, category)
+SERVICES = {
+    "um_khaled": {"rides": [(1, 9, "Home", "Dubai Mall", "Comfort"), (1, 12, "Dubai Mall", "Home", "Comfort")],
+                  "box": (30, "Home", "Work", "Car", "Food, groceries")},
+    "abu_sami": {"rides": [(4, 11, "Home", "Gym", "Go"), (4, 13, "Gym", "Home", "Go")],
+                 "box": (14, "Work", "Home", "Motorbike", "Documents and others")},
+    "new_user": {"rides": [], "box": None},
+}
+
+
+def service_history(today):
+    """10 weeks of weekly rides and a few Box deliveries per user, with a little time noise."""
+    rides, boxes = [], []
+    start = today - dt.timedelta(days=70)
+    for uid, s in SERVICES.items():
+        for weekday, hour, a, b, product in s["rides"]:
+            d = start + dt.timedelta(days=(weekday - start.weekday()) % 7)
+            while d < today:
+                ts = dt.datetime.combine(d, dt.time(hour, rng.randint(0, 40)))
+                rides.append({"user_id": uid, "ts": ts.isoformat(timespec="minutes"), "from": a, "to": b, "product": product})
+                d += dt.timedelta(days=7)
+        if s["box"]:
+            gap, a, b, vehicle, category = s["box"]
+            d = start + dt.timedelta(days=rng.randint(0, 5))
+            while d < today - dt.timedelta(days=gap // 2):
+                ts = dt.datetime.combine(d, dt.time(16, rng.randint(0, 59)))
+                boxes.append({"user_id": uid, "ts": ts.isoformat(timespec="minutes"), "from": a, "to": b,
+                              "vehicle": vehicle, "category": category})
+                d += dt.timedelta(days=gap + rng.randint(-2, 2))
+    return {"places": {k: {"location_id": v[0], "latitude": v[1], "longitude": v[2]} for k, v in PLACES.items()},
+            "rides": sorted(rides, key=lambda r: r["ts"]), "box": sorted(boxes, key=lambda r: r["ts"])}
+
+
 def main(today=None):
     today = today or dt.date.today()
     catalog = [{"item_id": i, "name_en": en, "name_ar": ar, "price_jod": p, "unit": un, "category": cat,
@@ -136,7 +173,10 @@ def main(today=None):
     (OUT / "orders.json").write_text(json.dumps(orders, ensure_ascii=False, indent=1))
     (OUT / "bandit_logs.json").write_text(json.dumps(bandit_logs()))
     (OUT / "uplift_logs.json").write_text(json.dumps(uplift_logs()))
-    print(f"catalog {len(catalog)} items, {len(users)} users, {len(orders)} orders, generated for {today}")
+    services = service_history(today)
+    (OUT / "services.json").write_text(json.dumps(services, indent=1))
+    print(f"catalog {len(catalog)} items, {len(users)} users, {len(orders)} orders, "
+          f"{len(services['rides'])} rides, {len(services['box'])} Box deliveries, generated for {today}")
 
 
 if __name__ == "__main__":

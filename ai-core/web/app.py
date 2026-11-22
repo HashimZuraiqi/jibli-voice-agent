@@ -1,5 +1,6 @@
 """Demo server: .venv/bin/python -m uvicorn web.app:app --port 8000  then open http://127.0.0.1:8000"""
 import datetime as dt
+import os
 import shutil
 from pathlib import Path
 
@@ -27,7 +28,8 @@ def build():
     llm = LLM()
     memory = S.get("memory") or make_memory(STATE, llm.models)  # Mem0's Qdrant keeps a file lock, so reuse it
     layer = PersonalizationLayer(store)
-    S.update(store=store, memory=memory, layer=layer, brain=Brain(store, memory, layer, make_tools(store, memory), llm))
+    tools = make_tools(store, memory, layer.services["places"])  # CAREEM_PROVIDER: mock, mcp or mcp-all
+    S.update(store=store, memory=memory, layer=layer, brain=Brain(store, memory, layer, tools, llm))
 
 
 build()
@@ -36,6 +38,8 @@ build()
 def now_from(t):
     """Demo clock: optional HH:MM override for today, to show quiet hours etc."""
     n = dt.datetime.now().replace(second=0, microsecond=0)
+    if t and "T" in t:  # full date and time, e.g. 2026-11-24T09:10
+        return dt.datetime.fromisoformat(t)
     if t:
         h, m = (int(x) for x in t.split(":"))
         n = n.replace(hour=h, minute=m)
@@ -99,8 +103,10 @@ def state(user_id: str, time: str | None = None):
     return {"now": now.isoformat(timespec="minutes"), "user": st.users[user_id], "memory": S["memory"].all(user_id),
             "predictions": snap["predictions"][:8], "advice": snap["advice"], "cart": st.cart_view(user_id),
             "pending": st.state["pending"].get(user_id), "orders": st.orders(user_id)[-3:][::-1],
+            "service_orders": [o for o in st.state.get("service_orders", []) if o["user_id"] == user_id][-5:][::-1],
             "events": st.events(user_id)[-12:][::-1], "llm_calls": S["brain"].llm.calls,
-            "careem_provider": "Careem MCP" if hasattr(S["brain"].tools, "family_checkout") else "mock",
+            "careem_provider": ("Careem MCP, all services" if hasattr(S["brain"].tools, "execute_pending")
+                                else "Careem MCP, groceries" if hasattr(S["brain"].tools, "family_checkout") else "mock"),
             "memory_provider": "AgentCore Memory" if type(S["memory"]).__name__ == "AgentCoreMemory" else "Mem0"}
 
 

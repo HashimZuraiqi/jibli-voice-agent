@@ -369,13 +369,19 @@ class CareemMCPTools:
         return {"status": "ordered", "order": order}
 
 
-def make_tools(store, memory):
-    """CAREEM_PROVIDER=mock (default, local data) or mcp (real Careem). If MCP can't start, say so and use the mocks."""
+def make_tools(store, memory, places=None):
+    """CAREEM_PROVIDER=mock (default, local data), mcp (real Careem, groceries) or mcp-all (groceries, food, Box and
+    rides through agent/careem.py). If MCP can't start, say so and use the mocks."""
     from .tools import Tools
     local = Tools(store, memory)
-    if os.getenv("CAREEM_PROVIDER", "mock").lower() != "mcp":
+    provider = os.getenv("CAREEM_PROVIDER", "mock").lower()
+    if provider not in ("mcp", "mcp-all"):
         return local
     try:
+        if provider == "mcp-all":
+            from .careem import CareemTools
+            from .personalization import services
+            return CareemTools(store, memory, places or services.load()["places"])
         return CareemMCPTools(store, memory, local)
     except Exception as e:
         print(f"[careem] MCP unavailable, using mock tools: {type(e).__name__}: {e}")

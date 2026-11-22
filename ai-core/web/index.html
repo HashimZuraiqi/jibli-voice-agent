@@ -105,10 +105,14 @@ async function refresh() {
     <h2>Predict · running out</h2>${s.predictions.length ? `<table><tr><th>Item</th><th>Every</th><th>Since</th><th>Due</th></tr>
       ${s.predictions.map(p => `<tr><td>${esc(p.name_en)}<br><span class="muted">${esc(p.name_ar)}</span></td><td>${p.median_gap_days} d</td><td>${p.days_since} d</td><td class="${p.due_score >= .9 ? "due" : ""}">${p.due_score}</td></tr>`).join("")}</table>`
       : `<p class="muted">No history: cold start. Similar users buy ${a.suggestions_for_new_user.map(x => esc(x.name_en)).join(", ")}.</p>`}
+    <h2>Predict · usual ride and Box</h2><div>Ride now: ${a.usual_ride ? `<b>${esc(a.usual_ride.from)} → ${esc(a.usual_ride.to)}</b> by ${esc(a.usual_ride.product)} <span class="muted">(${a.usual_ride.times}× at this time)</span>` : '<span class="muted">none at this time</span>'}<br>
+      Box: ${a.usual_box ? `<b>${esc(a.usual_box.from)} → ${esc(a.usual_box.to)}</b> by ${esc(a.usual_box.vehicle)} <span class="muted">every ~${a.usual_box.median_gap_days} d, last ${a.usual_box.days_since} d ago</span> ${a.usual_box.due ? '<span class="due">due</span>' : ''}` : '<span class="muted">none</span>'}</div>
     <h2>Decide · reminder style (LinUCB)</h2>${Object.entries(a.style_scores).map(([k, v]) =>
       `<div>${k === a.style ? "<b>" : ""}${k}${k === a.style ? "</b>" : ""} <span class="bar" style="width:${Math.max(4, 120 * v / maxS)}px"></span> <span class="muted">${v}</span></div>`).join("")}
     <h2>Decide · offer (uplift)</h2><div>${a.offer ? `<b>Give ${a.offer.discount_pct}% off</b>` : "<b>No offer</b>"} · uplift ${od.uplift} (needs ≥ ${od.threshold})<br><span class="muted">${esc(od.reason)}</span></div>
-    <h2>Cart</h2>${s.cart.lines.length ? `<ul>${s.cart.lines.map(l => `<li>${l.qty} × ${esc(l.name_en)} — ${l.line_jod} JOD</li>`).join("")}</ul><b>${s.cart.total_jod} JOD</b>` : '<p class="muted">empty</p>'}
+    ${s.pending && s.pending.summary ? `<h2>Waiting for approval</h2><div>${esc(s.pending.summary)} · <b>${s.pending.total} ${esc(s.pending.currency)}</b> · by ${esc(s.pending.by)} <span class="muted">(${esc(s.pending.tool)})</span></div>` : ""}
+    ${s.service_orders.length ? `<h2>Careem orders</h2><ul>${s.service_orders.map(o => `<li class="${o.ok ? "" : "bad"}">${esc(o.ts.replace("T", " "))} · ${esc(o.service)} · ${esc(o.summary)} · ${o.total} ${esc(o.currency)} · ${o.ok ? "placed" : "failed"} by ${esc(o.confirmed_by)}</li>`).join("")}</ul>` : ""}
+    <h2>Cart <span class="muted">(${s.careem_provider === "mock" ? "offline catalog" : "offline catalog; Careem carts live in careem-mcp"})</span></h2>${s.cart.lines.length ? `<ul>${s.cart.lines.map(l => `<li>${l.qty} × ${esc(l.name_en)} — ${l.line_jod} JOD</li>`).join("")}</ul><b>${s.cart.total_jod} JOD</b>` : '<p class="muted">empty</p>'}
     ${s.orders.length ? `<h2>Recent orders</h2><ul>${s.orders.map(o => `<li>${esc(o.ts.replace("T", " "))} · ${o.items.length} items · ${o.total} JOD · by ${esc(o.confirmed_by)}</li>`).join("")}</ul>` : ""}
     <h2>Guardrails & learning log</h2>${s.events.length ? `<ul>${s.events.map(e => `<li class="${e.ok === false ? "bad" : ""}">${esc(e.ts.slice(11))} ${esc(e.kind)} ${esc(e.check || e.style || e.by || "")} ${esc(e.reply || e.reason || "")}</li>`).join("")}</ul>` : '<p class="muted">nothing yet</p>'}`;
 }
@@ -123,7 +127,7 @@ document.querySelector("[data-fb]").onclick = () => busy(async () => { const d =
   say("sys", d.rewarded ? `No reply: reward 0 for style "${d.rewarded.style}"` : "No open reminder to answer"); });
 $("family").onclick = e => { if (!e.target.dataset.fam) return; busy(async () => {
   const d = await api("/api/family", {user_id: uid(), approve: e.target.dataset.fam === "1", time: t()});
-  say("sys", d.status === "ordered" ? `Family approved: order ${d.order.order_id} placed (${d.order.total} JOD)` : `Family: ${d.status} ${d.reason || ""}`); }); };
+  say("sys", d.status === "ordered" ? (d.order ? `Family approved: order ${d.order.order_id} placed (${d.order.total} JOD)` : `Family approved: Careem ${d.service} placed`) : `Family: ${d.status} ${d.reason || (d.result && d.result.error) || ""}`); }); };
 $("panel").onclick = e => { if (e.target.dataset.forget) busy(() => api("/api/forget", {user_id: uid(), memory_id: e.target.dataset.forget})); };
 $("reset").onclick = () => busy(async () => { await api("/api/reset", {}); Object.keys(history).forEach(k => delete history[k]); draw(); });
 $("user").onchange = () => { draw(); refresh(); };

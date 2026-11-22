@@ -8,7 +8,7 @@ code docs: [Sanad — Code Documentation](https://claude.ai/artifact/4RW78cQdw1F
 
 **Our scope: the LLM brain and the personalization layer only.** Speech-to-text and text-to-speech are a teammate's
 part: here the input is the already-transcribed text, and the output is the text a TTS would speak.
-Careem's services are mocked with local JSON data.
+Careem's services come through **careem-mcp** (MCP): a local sandbox built from Careem's spec in `careem-mcp-sandbox/` (groceries, food, cart, Box, user; production-identical tool shapes, fixed sample answers), rides through a local stand-in (not in Careem's public sandbox yet). `CAREEM_PROVIDER` picks the path: `mock` (offline catalog, default), `mcp` (groceries; works with production) or `mcp-all` (every service, `agent/careem.py`).
 
 ## Stack
 
@@ -68,7 +68,10 @@ agent/careem_mcp.py     real Careem MCP (CAREEM_PROVIDER=mcp): only an allow-lis
 agent/memory.py         make_memory(): AgentCore (default) or Mem0 backup + seed facts
 agent/agentcore_memory.py  AgentCore Memory backend
 scripts/                create_agentcore_memory.py (run once), careem_login.py (production OAuth token)
-agent/personalization/  repurchase, bandit, uplift, guardrails, layer
+agent/careem.py         Careem MCP for all services (CAREEM_PROVIDER=mcp-all): groceries, food, Box, rides stand-in;
+                        the LLM proposes the exact checkout, it runs once after a human yes
+agent/personalization/  repurchase, services (usual ride / Box), bandit, uplift, guardrails, layer
+careem-mcp-sandbox/     local careem-mcp server from Careem's spec + its CLI and acceptance tests
 agent/brain.py          the 7-step loop
 data/                   generate.py → catalog, users, orders, synthetic bandit + uplift logs
 web/app.py, web/index.html   chat page + side panel (memory, due items, bandit choice, offer, guardrail log)
@@ -83,3 +86,12 @@ state/                  runtime state (Mem0/Qdrant, bandit pickle, carts); git-i
   `.venv/bin/python -m pytest -q` before saying something works.
 - Prompts live in `agent/prompts/*.txt`.
 - Deterministic: temperature 0, fixed seeds for bandit, uplift and data generation.
+
+## Careem MCP rules
+
+- The LLM never gets the spending tools (`cart_grocery_checkout`, `cart_checkout`, `box_create_order`, `rides_request`).
+  It proposes the exact call with `request_confirmation`; `CareemTools.execute_pending` runs it once after the user's
+  clear yes (later message) or the family's approval, and never retries a failed checkout.
+- A new cart or quote cancels a pending confirmation only for the same service.
+- Spend cap per currency (`SPEND_CAPS`: 30 JOD, 150 AED). The sandbox world is Dubai / AED; production in Amman is JOD.
+- With `CAREEM_PROVIDER=mcp-all`, start the sandbox before the app: `.venv/bin/python careem-mcp-sandbox/careem_mcp.py start`.
