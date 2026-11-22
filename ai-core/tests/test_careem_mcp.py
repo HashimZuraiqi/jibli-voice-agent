@@ -242,3 +242,11 @@ def test_asked_of_khaled_only_khaled(tmp_path):
     assert "BLOCKED" in tools.run("place_order", {"confirmed_by": "user"}, ctx(2, "اه"))["error"]
     assert tools.family_checkout("um_khaled", "Abu Khaled", NOW)["status"] == "blocked"  # not allowed to confirm
     assert tools.family_checkout("um_khaled", "Khaled", NOW)["status"] == "ordered"
+
+
+def test_single_item_basket_uses_basket_total_not_item_price():
+    one = {"basket": {"id": 7, "items": [{"title_localized": "Milk", "count": 1, "price": {"total": 13.5}}]},
+           "price": {"total": 19.0}}
+    assert CareemMCPTools.total(one) == 19.0
+    assert CareemMCPTools.total({"price": {"price": {"total": 45.5}}}) == 45.5
+    assert CareemMCPTools.total({"total": 4.25}) == 4.25

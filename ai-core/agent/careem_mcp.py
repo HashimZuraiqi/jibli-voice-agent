@@ -233,6 +233,14 @@ class CareemMCPTools:
 
     @staticmethod
     def total(basket):
+        # the basket total first (Careem: price.total / price.price.total), never an item's price
+        node = basket if isinstance(basket, dict) else {}
+        for path in (("price", "price", "total"), ("price", "total"), ("basket", "price", "total"), ("total",)):
+            v = node
+            for key in path:
+                v = v.get(key) if isinstance(v, dict) else None
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                return float(v)
         for k, v in flatten(basket).items():
             if norm_key(k) in TOTAL_KEYS:
                 try:
@@ -331,7 +339,10 @@ class CareemMCPTools:
             # resolves itself, so a guess (the LLM once sent city_id=0) must never reach checkout.
             seen = {**typed, **answers} if prop in required else answers
             # the price must come from the basket that was confirmed, never from an older answer
-            v = next((basket[a] for a in ALIASES.get(key, ()) if a in basket), None)
+            if key == "totalprice":  # the confirmed basket's total, never one item's price
+                v = self.total(st["basket"])
+            else:
+                v = next((basket[a] for a in ALIASES.get(key, ()) if a in basket), None)
             if v is None and key not in ALIASES:
                 v = next((seen[a] for a in SEEN_ALIASES.get(key, (key,)) if a in seen), None)
             if v is None:
