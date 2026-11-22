@@ -32,7 +32,7 @@ class SpecError(Exception):
 # ---------- parsing (spec/BUILD.md §2) ----------
 
 def parse_file(path: Path) -> dict:
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     if not text.startswith("---\n"):
         raise SpecError(f"{path.name}: missing frontmatter")
     end = text.index("\n---\n", 4)
@@ -230,7 +230,7 @@ def render(template: str, args: dict):
 
 def overrides():
     try:
-        data = json.loads(OVERRIDES.read_text())
+        data = json.loads(OVERRIDES.read_text(encoding="utf-8"))
         return data if isinstance(data, dict) else {}
     except (OSError, ValueError):
         return {}

@@ -9,7 +9,7 @@ MAX_TOOL_ROUNDS = 10  # a Careem order is search -> cart -> price -> confirm, of
 
 
 def prompt(file, **kw):
-    text = (PROMPTS / f"{file}.txt").read_text()
+    text = (PROMPTS / f"{file}.txt").read_text(encoding="utf-8")
     for k, v in kw.items():
         text = text.replace("{" + k + "}", str(v))
     return text
@@ -167,6 +167,8 @@ class Brain:
             self.store.state["pending"].pop(user_id, None)
             self.store.log(user_id, "confirmation_declined", now, by=by)
             return {"status": "declined"}
+        if hasattr(self.tools, "family_checkout"):  # real Careem MCP: checkout behind the same gate
+            return self.tools.family_checkout(user_id, by, now)
         ok, reason = g.can_place_order(self.store, user_id, by)
         self.store.log(user_id, "guardrail", now, check="place_order", ok=ok, reason=reason)
         if not ok:

@@ -8,13 +8,12 @@ import math
 import os
 import uuid
 
-import anyio
 from jsonschema import Draft202012Validator
 
 from .personalization import guardrails as g
 from .personalization.repurchase import predictions
 
-MCP_URL = os.getenv("CAREEM_MCP_URL", "http://127.0.0.1:8787/mcp")
+MCP_URL = os.getenv("CAREEM_MCP_URL") or "http://127.0.0.1:8787/mcp"  # the local sandbox by default
 
 # what the LLM may call directly (read, search, build carts and quotes)
 LLM_TOOLS = [
@@ -38,33 +37,20 @@ RIDE_PRODUCTS = {"Go": (8.0, 1.9), "Comfort": (11.0, 2.4), "Business": (25.0, 4.
 
 
 class CareemMCP:
-    """Synchronous wrapper around the official MCP client; one short connection per call."""
+    """Careem's MCP connection (careem_mcp.MCPConnector: http or sse, Bearer token for production), tools cached by name."""
 
-    def __init__(self, url=MCP_URL):
-        self.url = url
+    def __init__(self, url=None):
+        from .careem_mcp import MCPConnector
+        self.conn = MCPConnector(url or MCP_URL)
         self._tools = None
-
-    def _run(self, fn):
-        from mcp import Client
-
-        async def go():
-            async with Client(self.url) as c:
-                return await fn(c)
-        return anyio.run(go)
 
     def tools(self):
         if self._tools is None:
-            listed = self._run(lambda c: c.list_tools()).tools
-            self._tools = {t.name: t.model_dump(by_alias=True, exclude_none=True, mode="json") for t in listed}
+            self._tools = {t["name"]: t for t in self.conn.list_tools()}
         return self._tools
 
     def call(self, name, args):
-        r = self._run(lambda c: c.call_tool(name, args))
-        if r.is_error:
-            return {"error": r.content[0].text if r.content else "tool error"}
-        if r.structured_content is not None:
-            return r.structured_content
-        return json.loads(r.content[0].text) if r.content else {}
+        return self.conn.call(name, args)
 
 
 def _km(a, b):

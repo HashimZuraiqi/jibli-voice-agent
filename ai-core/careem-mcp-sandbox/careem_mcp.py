@@ -68,7 +68,7 @@ def stop():
 
 def write_overrides(data):
     RUN.mkdir(exist_ok=True)
-    server.OVERRIDES.write_text(json.dumps(data, indent=1))
+    server.OVERRIDES.write_text(json.dumps(data, indent=1), encoding="utf-8")
 
 
 def main(argv):

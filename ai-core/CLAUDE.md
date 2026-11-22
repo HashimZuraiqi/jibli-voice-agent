@@ -8,7 +8,7 @@ code docs: [Sanad — Code Documentation](https://claude.ai/artifact/4RW78cQdw1F
 
 **Our scope: the LLM brain and the personalization layer only.** Speech-to-text and text-to-speech are a teammate's
 part: here the input is the already-transcribed text, and the output is the text a TTS would speak.
-Careem's services come through **careem-mcp** (MCP): a local sandbox built from Careem's spec in `careem-mcp-sandbox/` (groceries, food, cart, Box, user; production-identical tool shapes, fixed sample answers), rides through a local stand-in (not in Careem's public sandbox yet). `CAREEM_MODE=mock` falls back to the offline JSON catalog.
+Careem's services come through **careem-mcp** (MCP): a local sandbox built from Careem's spec in `careem-mcp-sandbox/` (groceries, food, cart, Box, user; production-identical tool shapes, fixed sample answers), rides through a local stand-in (not in Careem's public sandbox yet). `CAREEM_PROVIDER` picks the path: `mock` (offline catalog, default), `mcp` (groceries; works with production) or `mcp-all` (every service, `agent/careem.py`).
 
 ## Stack
 
@@ -16,8 +16,13 @@ Careem's services come through **careem-mcp** (MCP): a local sandbox built from 
 - LLM: **Claude on Amazon Bedrock** (Converse API via `boto3`, `global.anthropic.claude-sonnet-5-5`, us-east-1).
   Credentials come from the environment / default chain, never code; the event's expire hourly, so paste new ones
   into `.env` and the next call reloads them. Fallback: `LLM_PROVIDER=openrouter` (free tier, 50 requests/day).
-- Memory: **Mem0** (`mem0ai`), LLM = Bedrock Haiku (or OpenRouter), embedder = **FastEmbed** local multilingual
-  (`paraphrase-multilingual-MiniLM-L12-v2`, 384 dims), vector store = local Qdrant in `state/`.
+- Memory: **Amazon Bedrock AgentCore Memory** (default, `agent/agentcore_memory.py`, `MEMORY_PROVIDER=agentcore`):
+  actorId = user_id; user messages -> `create_event`, AgentCore's semantic + user-preference strategies extract facts
+  into `/users/{actorId}/facts/` and `/users/{actorId}/preferences/`; seed facts via `batch_create_memory_records`;
+  recall = `retrieve_memory_records`, list = `list_memory_records`, forget = `delete_memory_record`.
+  Create the resource once with `scripts/create_agentcore_memory.py` -> `AGENTCORE_MEMORY_ID` in `.env`.
+- Memory backup: **Mem0** (`MEMORY_PROVIDER=mem0`, `mem0ai`), LLM = Bedrock Haiku (or OpenRouter), embedder = **FastEmbed** local multilingual
+  (`paraphrase-multilingual-MiniLM-L12-v2`, 384 dims), vector store = local Qdrant in `state/`. Imported only when chosen.
 - Bandit: **MABWiser** LinUCB. Uplift: **CausalML** `BaseTClassifier` (control group named `"control"`).
 - Web: FastAPI + one static HTML page.
 - Mem0 v2 API: `add(..., user_id=...)` but `search(q, filters={"user_id": ...}, top_k=...)` and
@@ -26,7 +31,7 @@ Careem's services come through **careem-mcp** (MCP): a local sandbox built from 
 ## The brain: 7 steps per user message (`agent/brain.py`)
 
 1. **Hear** — receive the transcribed text (Jordanian Arabic, English or a mix).
-2. **Remember** — Mem0 search for facts relevant to the message + the user profile (family, payer, usual basket).
+2. **Remember** — AgentCore Memory search for facts relevant to the message + the user profile (family, payer, usual basket).
 3. **Advise** — the personalization layer returns advice: items running out, whether an offer is worth giving, which style to speak in.
 4. **Think** — the LLM reads message + memory + advice and plans (OpenAI-style tool calling).
 5. **Act** — tool calls on the mocked Careem services: search catalog, usual basket, cart.
@@ -55,9 +60,16 @@ reorder gaps per item category (`data/catalog.json` `default_gap_days`).
 
 ```
 agent/llm.py            Bedrock Converse client (OpenRouter fallback), same OpenAI-style return shape
-agent/careem.py         careem-mcp client: Careem tools for the LLM, checkout gate, rides stand-in
-agent/tools.py          offline mock tools (CAREEM_MODE=mock)
-agent/memory.py         Mem0 wrapper + sensitive-data filter
+agent/tools.py          mocked Careem tools (catalog, usual basket, cart, confirm, place order) = default/backup
+agent/careem_mcp.py     real Careem MCP (CAREEM_PROVIDER=mcp): only an allow-list of grocery/read tools reaches the
+                        LLM; cart_grocery_checkout only via the confirm gate (total_price from the confirmed basket,
+                        once, never retried). Sandbox http://127.0.0.1:8787/mcp (fake Dubai data, no token);
+                        production https://mcp.careemapis.com/mcp = REAL account, orders, money
+agent/memory.py         make_memory(): AgentCore (default) or Mem0 backup + seed facts
+agent/agentcore_memory.py  AgentCore Memory backend
+scripts/                create_agentcore_memory.py (run once), careem_login.py (production OAuth token)
+agent/careem.py         Careem MCP for all services (CAREEM_PROVIDER=mcp-all): groceries, food, Box, rides stand-in;
+                        the LLM proposes the exact checkout, it runs once after a human yes
 agent/personalization/  repurchase, services (usual ride / Box), bandit, uplift, guardrails, layer
 careem-mcp-sandbox/     local careem-mcp server from Careem's spec + its CLI and acceptance tests
 agent/brain.py          the 7-step loop
@@ -82,4 +94,4 @@ state/                  runtime state (Mem0/Qdrant, bandit pickle, carts); git-i
   clear yes (later message) or the family's approval, and never retries a failed checkout.
 - A new cart or quote cancels a pending confirmation only for the same service.
 - Spend cap per currency (`SPEND_CAPS`: 30 JOD, 150 AED). The sandbox world is Dubai / AED; production in Amman is JOD.
-- Start the sandbox before the app: `.venv/bin/python careem-mcp-sandbox/careem_mcp.py start`.
+- With `CAREEM_PROVIDER=mcp-all`, start the sandbox before the app: `.venv/bin/python careem-mcp-sandbox/careem_mcp.py start`.

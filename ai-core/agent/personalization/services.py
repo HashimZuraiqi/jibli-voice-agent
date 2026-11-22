@@ -11,7 +11,7 @@ MIN_RIDES = 3        # ...and happened at least this many times
 
 def load():
     p = DATA / "services.json"
-    return json.loads(p.read_text()) if p.exists() else {"places": {}, "rides": [], "box": []}
+    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {"places": {}, "rides": [], "box": []}
 
 
 def usual_ride(data, user_id, now):

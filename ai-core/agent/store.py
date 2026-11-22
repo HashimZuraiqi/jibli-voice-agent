@@ -11,20 +11,20 @@ class Store:
     def __init__(self, state_dir: Path = STATE):
         self.state_dir = Path(state_dir)
         self.state_dir.mkdir(parents=True, exist_ok=True)
-        self.catalog = {c["item_id"]: c for c in json.loads((DATA / "catalog.json").read_text())}
-        self.users = json.loads((DATA / "users.json").read_text())
-        self.base_orders = json.loads((DATA / "orders.json").read_text())
+        self.catalog = {c["item_id"]: c for c in json.loads((DATA / "catalog.json").read_text(encoding="utf-8"))}
+        self.users = json.loads((DATA / "users.json").read_text(encoding="utf-8"))
+        self.base_orders = json.loads((DATA / "orders.json").read_text(encoding="utf-8"))
         self.state = self._load()
 
     def _load(self):
         p = self.state_dir / "store.json"
         if p.exists():
-            return json.loads(p.read_text())
+            return json.loads(p.read_text(encoding="utf-8"))
         return {"orders": [], "carts": {}, "pending": {}, "events": []}
 
     def save(self):
         self.state_dir.mkdir(parents=True, exist_ok=True)  # survive state/ being deleted while the server runs
-        (self.state_dir / "store.json").write_text(json.dumps(self.state, ensure_ascii=False, indent=1))
+        (self.state_dir / "store.json").write_text(json.dumps(self.state, ensure_ascii=False, indent=1), encoding="utf-8")
 
     def orders(self, user_id):
         return [o for o in self.base_orders + self.state["orders"] if o["user_id"] == user_id]
