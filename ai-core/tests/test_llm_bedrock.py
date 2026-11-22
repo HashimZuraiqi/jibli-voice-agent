@@ -55,3 +55,25 @@ def test_throttling_is_retried(monkeypatch):
     llm = BedrockLLM(client=Fake([err, ok]))
     msg, _ = llm.chat([{"role": "user", "content": "hi"}])
     assert msg.content == "هلا" and msg.tool_calls == []
+
+
+def test_prompt_cache_points_on_system_and_tools():
+    ok = {"output": {"message": {"content": [{"text": "هلا"}]}}}
+    fake = Fake([ok])
+    tools = [{"type": "function", "function": {"name": "view_cart", "description": "d",
+                                               "parameters": {"type": "object", "properties": {}, "required": []}}}]
+    _, meta = BedrockLLM(client=fake).chat([{"role": "system", "content": "be kind"}, {"role": "user", "content": "hi"}], tools)
+    kw = fake.seen[0]
+    assert kw["system"][-1] == {"cachePoint": {"type": "default"}}
+    assert kw["toolConfig"]["tools"][-1] == {"cachePoint": {"type": "default"}}
+    assert "ms" in meta
+
+
+def test_prompt_cache_turns_itself_off_when_refused():
+    err = ClientError({"Error": {"Code": "ValidationException", "Message": "prompt caching is not supported"}}, "Converse")
+    ok = {"output": {"message": {"content": [{"text": "هلا"}]}}}
+    fake = Fake([err, ok])
+    llm = BedrockLLM(client=fake)
+    msg, _ = llm.chat([{"role": "system", "content": "be kind"}, {"role": "user", "content": "hi"}])
+    assert msg.content == "هلا" and llm.cache is False
+    assert all("cachePoint" not in b for b in fake.seen[1]["system"])

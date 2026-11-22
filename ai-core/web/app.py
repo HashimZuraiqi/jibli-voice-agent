@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
@@ -17,7 +17,8 @@ from agent.llm import LLM, QuotaExceeded  # noqa: E402
 from agent.memory import make_memory  # noqa: E402
 from agent.personalization.layer import PersonalizationLayer  # noqa: E402
 from agent.store import STATE, Store  # noqa: E402
-from agent.careem_mcp import make_tools  # noqa: E402
+from agent.careem_mcp import CareemMCPTools, make_tools  # noqa: E402
+from agent import voice  # noqa: E402
 
 app = FastAPI(title="Voice agent: LLM brain + personalization")
 S = {}
@@ -155,3 +156,114 @@ def reset():
         (STATE / name).unlink(missing_ok=True)
     build()
     return {"status": "reset"}
+
+
+# ---------------------------------------------------------------- voice page (elder) + family page (Faris)
+
+@app.get("/voice/{user_id}")
+def voice_page(user_id: str):
+    check_user(user_id)
+    return FileResponse(ROOT / "web" / "voice.html")
+
+
+@app.get("/family/{user_id}")
+def family_page(user_id: str):
+    check_user(user_id)
+    return FileResponse(ROOT / "web" / "family.html")
+
+
+def spoken(reply):
+    """Text-to-speech for a reply; never fails the request (the page falls back to the browser's voice)."""
+    try:
+        out = voice.speak(reply)
+    except Exception as e:  # e.g. Polly not allowed or offline
+        print(f"[voice] TTS failed, browser will speak: {type(e).__name__}: {e}")
+        return None, None
+    if not out:
+        return None, None
+    import base64
+    return base64.b64encode(out[0]).decode(), out[1]
+
+
+@app.get("/api/voice-config")
+def voice_config():
+    """Tells the voice page how to listen: browser (its own speech recognition) or server (/api/voice)."""
+    return {"stt": "browser" if os.getenv("STT_PROVIDER", "whisper").lower() == "browser" else "server",
+            "tts": os.getenv("TTS_PROVIDER", "browser").lower()}
+
+
+@app.post("/api/voice")
+async def voice_message(request: Request, user_id: str, time: str | None = None):
+    """Body = the recorded audio (any browser format). Audio -> STT -> brain -> TTS. The audio is never stored."""
+    check_user(user_id)
+    audio = await request.body()
+    try:
+        text = voice.transcribe(audio, request.headers.get("content-type", "audio/webm"))
+    except voice.NoSTT as e:
+        raise HTTPException(503, str(e))
+    if not text:
+        raise HTTPException(422, "I couldn't hear anything, please try again")
+    out = S["brain"].handle(user_id, text[:1000], now_from(time))
+    audio_b64, mime = spoken(out["reply"])
+    return {"transcript": text, "reply": out["reply"], "audio_b64": audio_b64, "audio_mime": mime,
+            "waiting": family_view(user_id)}
+
+
+class Say(BaseModel):
+    user_id: str
+    text: str
+    time: str | None = None
+
+
+@app.post("/api/say")
+def say(m: Say):
+    """Typed text or a tapped yes / no button on the voice page: same brain, spoken reply."""
+    check_user(m.user_id)
+    if not m.text.strip():
+        raise HTTPException(400, "empty message")
+    out = S["brain"].handle(m.user_id, m.text.strip()[:1000], now_from(m.time))
+    audio_b64, mime = spoken(out["reply"])
+    return {"transcript": m.text, "reply": out["reply"], "audio_b64": audio_b64, "audio_mime": mime,
+            "waiting": family_view(m.user_id)}
+
+
+def _items(cart):
+    """Item lines from whatever the path stored: a Careem basket answer, or the mock cart view."""
+    if not isinstance(cart, dict):
+        return []
+    if cart.get("lines"):  # mock cart_view
+        return [{"name": l["name_ar"], "qty": l["qty"], "price": l["line_jod"]} for l in cart["lines"]]
+    basket = cart.get("basket") if isinstance(cart.get("basket"), dict) else cart
+    return [{"name": i.get("title_localized") or i.get("title") or i.get("name") or "?",
+             "qty": i.get("count") or i.get("quantity") or 1,
+             "price": (i.get("price") or {}).get("total") if isinstance(i.get("price"), dict) else i.get("price")}
+            for i in (basket.get("items") or []) if isinstance(i, dict)]
+
+
+@app.get("/api/family-view/{user_id}")
+def family_view(user_id: str):
+    """What the family page shows: the order waiting for approval (any Careem path), or the last order."""
+    check_user(user_id)
+    st, u = S["store"], S["store"].users[user_id]
+    p = st.state["pending"].get(user_id)
+    # Arabic names for the pages (confirm_by, pending "by", last order "by" are stored in English)
+    names = {u["name"]: u.get("name_ar", u["name"]), **{f["name"]: f.get("name_ar", f["name"]) for f in u.get("family", [])}}
+    view = {"user": {"name": u["name"], "name_ar": u.get("name_ar", u["name"])}, "confirmer": u.get("confirm_by"),
+            "names": names, "waiting": False}
+    if p:
+        cart = p.get("cart")
+        if p.get("tool"):  # mcp-all: careem.py stored the exact checkout
+            total, currency = p.get("total"), p.get("currency")
+        elif isinstance(cart, dict) and "total_jod" in cart:  # mock
+            total, currency = cart["total_jod"], "JOD"
+        else:  # mcp: Careem basket answer
+            total, currency = CareemMCPTools.total(cart or {}), CareemMCPTools.currency(cart or {})
+        view.update(waiting=True, asked=p["by"], asked_user=p["by"] == u["name"], since=p.get("ts"),
+                    items=_items(cart), total=total, currency=currency, summary=p.get("summary"))
+    done = [e for e in st.events(user_id) if e["kind"] in ("careem_order", "confirmation_declined")]
+    service = [o for o in st.state.get("service_orders", []) if o["user_id"] == user_id]
+    local = st.orders(user_id)
+    last = max([(e["ts"], e) for e in done] + [(o["ts"], o) for o in service] + [(o["ts"], o) for o in local[-1:]],
+               key=lambda x: x[0], default=(None, None))[1]
+    view["last"] = last
+    return view

@@ -16,6 +16,8 @@ from zoneinfo import ZoneInfo
 
 from jsonschema import Draft202012Validator
 
+import amman  # SANDBOX_WORLD=amman: the grocery journey remembers the cart (Jordanian catalog, JOD, Amman)
+
 HERE = Path(__file__).resolve().parent
 SPEC = Path(os.getenv("CAREEM_MCP_SPEC", HERE / "spec"))
 OVERRIDES = Path(os.getenv("CAREEM_MCP_OVERRIDES", HERE / ".run" / "overrides.json"))
@@ -257,6 +259,17 @@ def call(files, name, arguments):
         e = errors[0]
         where = "/".join(str(p) for p in e.absolute_path)
         return None, True, f'validating "arguments": {where + ": " if where else ""}{e.message}'
+    if amman.ON and name in amman.TOOLS and not overrides().get(name):
+        def base(tool, a, scenario=None):
+            f = parse_file(files[tool]["path"])
+            return render(select(f, a, scenario)[0]["template"], a)
+        try:
+            value = amman.handle(name, args, base)
+        except Exception as e:
+            log(f"{name}: amman error: {e}")
+            return None, True, "internal server error"
+        log(f"{name} -> amman {json.dumps(args, ensure_ascii=False, separators=(',', ':'))}")
+        return value, False, json.dumps(value, ensure_ascii=False, separators=(",", ":"))
     try:
         file = parse_file(files[name]["path"])  # re-read: edits apply without a restart
         scenario, forced = select(file, args, overrides().get(name))
@@ -336,7 +349,7 @@ def main():
     a = ap.parse_args()
     files = load_all()
     server = build_server(files)
-    log(f"{SERVER_NAME}: {len(files)} tools loaded from {SPEC}")
+    log(f"{SERVER_NAME}: {len(files)} tools loaded from {SPEC}" + (" (Amman mode: groceries remember the cart, JOD)" if amman.ON else ""))
     if a.stdio:
         import anyio
         from mcp.server.stdio import stdio_server

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>جيبلي · موافقة العيلة</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --green:#1a8f4c; --green-d:#136b39; --soft:#e8f5ee; --red:#b3261e; --ink:#1b1b1b; --muted:#5f6b63; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Segoe UI", Tahoma, "Noto Naskh Arabic", Arial, sans-serif; background:#10291c; color:var(--ink);
+         min-height:100vh; display:flex; justify-content:center; align-items:flex-start; }
+  .phone { width:100%; max-width:440px; padding:28px 16px; }
+  .clock { color:#fff; text-align:center; font-size:56px; font-weight:300; margin:10px 0 0; }
+  .date { color:#cfe3d6; text-align:center; font-size:16px; margin-bottom:22px; }
+  .card { background:#fff; border-radius:22px; padding:18px; box-shadow:0 8px 24px #0005; }
+  .app { display:flex; justify-content:space-between; color:var(--muted); font-size:14px; margin-bottom:8px; }
+  .app b { color:var(--green-d); }
+  h1 { font-size:22px; margin:0 0 10px; }
+  .row { display:flex; justify-content:space-between; font-size:18px; padding:7px 0; border-bottom:1px solid #eef2ef; }
+  .total { display:flex; justify-content:space-between; font-size:22px; font-weight:700; padding-top:10px; }
+  .btns { display:flex; gap:10px; margin-top:16px; }
+  .btns button { flex:1; font-size:22px; font-weight:700; padding:16px 8px; border-radius:16px; cursor:pointer; }
+  .ok { background:var(--green); color:#fff; border:0; }
+  .dec { background:#fff; color:var(--red); border:2px solid var(--red); }
+  button:disabled { opacity:.6; cursor:wait; }
+  .note { color:var(--muted); font-size:15px; margin-top:12px; border-top:1px solid #eef2ef; padding-top:10px; }
+  .idle { text-align:center; color:var(--muted); font-size:18px; padding:10px 0; }
+  .result { text-align:center; font-size:22px; padding:12px 0 4px; }
+  .err { color:var(--red); font-size:16px; margin-top:10px; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="clock" id="clock"></div>
+  <div class="date" id="date"></div>
+  <div class="card" id="card"><div class="idle">…</div></div>
+</div>
+<script>
+const USER = decodeURIComponent(location.pathname.split("/").filter(Boolean).pop());
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const money = (v, cur) => v == null ? "—" : `${Number(v).toFixed(2).replace(/\.00$/, "")} ${cur === "AED" ? "درهم" : cur === "JOD" ? "دينار" : (cur || "")}`;
+const nm = (v, n) => (v && v.names && v.names[n]) || n || "";  // Arabic name (stored names are English)
+let acting = false, result = null, lastWaiting = null;
+
+function tick() { const n = new Date();
+  $("clock").textContent = n.toLocaleTimeString("ar-JO", {hour:"2-digit", minute:"2-digit"});
+  $("date").textContent = n.toLocaleDateString("ar-JO", {weekday:"long", day:"numeric", month:"long"}); }
+
+function header(v) { return `<div class="app"><b>جيبلي · Careem</b><span>هلق</span></div>`; }
+
+function render(v) {
+  if (acting) return;
+  const who = esc(v.user.name_ar);
+  if (v.waiting) {
+    result = null;
+    const items = (v.items || []).map(i => `<div class="row"><span>${esc(i.name)} · ${esc(i.qty)}</span><span>${i.price != null ? esc(money(i.price, v.currency)) : ""}</span></div>`).join("")
+                  || (v.summary ? `<div class="row">${esc(v.summary)}</div>` : "");
+    const note = v.asked_user
+      ? `${who} ممكن توافق بنفسها كمان — اللي بيوافق أول بيمشي الطلب، ومرة وحدة بس.`
+      : `${who} طلبت إنك توافق على هالطلب.`;
+    $("card").innerHTML = `${header(v)}<h1>${who} بدها تطلب أغراض 🛒</h1>${items}
+      <div class="total"><span>المجموع</span><span>${esc(money(v.total, v.currency))}</span></div>
+      <div class="btns"><button class="ok" id="ok">وافق</button><button class="dec" id="dec">رفض</button></div>
+      <div class="note">${note}</div><div class="err" id="err"></div>`;
+    $("ok").onclick = () => decide(true); $("dec").onclick = () => decide(false);
+  } else if (result) {
+    $("card").innerHTML = `${header(v)}<div class="result">${result}</div>`;
+  } else {
+    const last = v.last;
+    let lastLine = "";
+    if (last && last.kind === "careem_order") lastLine = `آخر طلب: وافق ${esc(nm(v, last.by))} · ${esc(last.ts.replace("T", " "))}`;
+    else if (last && last.kind === "confirmation_declined") lastLine = `آخر طلب انرفض · ${esc(last.ts.replace("T", " "))}`;
+    else if (last && last.confirmed_by) lastLine = `آخر طلب: وافق ${esc(nm(v, last.confirmed_by))} · ${esc(String(last.ts).replace("T", " "))}`;
+    $("card").innerHTML = `${header(v)}<div class="idle">ما في طلبات بتستنى موافقتك 👌${lastLine ? `<br><small>${lastLine}</small>` : ""}</div>`;
+  }
+}
+
+async function decide(approve) {
+  acting = true; $("ok").disabled = $("dec").disabled = true;
+  try {
+    const res = await fetch("/api/family", {method:"POST", headers:{"Content-Type":"application/json"},
+                                            body: JSON.stringify({user_id: USER, approve})});
+    const r = await res.json();
+    if (!res.ok) throw new Error(r.detail || r.error || res.statusText);
+    if (r.status === "ordered") result = "✅ تم! الطلب بالطريق.";
+    else if (r.status === "declined") result = "تم رفض الطلب. ما انطلب شي.";
+    else throw new Error(r.reason || r.error || r.status);
+  } catch (e) { acting = false; $("ok").disabled = $("dec").disabled = false; $("err").textContent = "⚠️ " + e.message; return; }
+  acting = false; poll();
+}
+
+let misses = 0;
+async function poll() {
+  try {
+    const res = await fetch(`/api/family-view/${encodeURIComponent(USER)}`);
+    const v = await res.json();
+    if (!res.ok) throw new Error(v.detail || v.error || res.statusText);
+    misses = 0; render(v);
+  } catch (e) {  // the app is down or restarting: say so instead of a silent "…", and keep retrying
+    if (++misses >= 2 && !acting)
+      $("card").innerHTML = `<div class="idle">⚠️ مش قادر أوصل للتطبيق هلق… عم بحاول كمان مرة<br><small>${esc(e.message)}</small></div>`;
+  }
+}
+tick(); setInterval(tick, 10000); poll(); setInterval(poll, 2000);
+</script>
+</body>
+</html>

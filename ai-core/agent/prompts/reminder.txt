@@ -3,5 +3,5 @@ Items running out: {items}.
 Style: {style} = {style_hint}.
 Offer: {offer}.
 Family member who usually confirms: {confirmer}.
-Language: {lang_rule}
+Language: {lang_rule}. It is read aloud by an Arabic voice: write Arabic words in Arabic letters only, product names in Arabic, no Latin letters.
 One to three short sentences, end with an easy yes/no question. Reply with the voice-note text only.

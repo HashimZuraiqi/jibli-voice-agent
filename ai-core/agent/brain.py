@@ -1,12 +1,23 @@
 """The brain: 7 steps per user message (hear, remember, advise, think, act, confirm, learn)."""
 import json
 import os
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from .personalization import guardrails as g
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
 MAX_TOOL_ROUNDS = 12  # the real Careem chain (user_info, searches, cart, price, confirm, order) needs ~9-10
+# every LLM round is a full Bedrock call, so fewer rounds = a faster answer
+SPEED_RULE = ("\n\nSpeed: the user is waiting on a voice call. Call tools that don't depend on each other in the same turn "
+              "(for example all product searches at once), don't call a tool whose answer you already have, and keep the "
+              "spoken reply to one or two short sentences.")
+BACKGROUND = ThreadPoolExecutor(max_workers=2)  # memory writes happen after the reply is sent
+
+
+def ms(t0):
+    return int((time.monotonic() - t0) * 1000)
 
 
 def sandbox_note():
@@ -15,6 +26,8 @@ def sandbox_note():
     url = os.getenv("CAREEM_MCP_URL", "")
     if os.getenv("CAREEM_PROVIDER", "mock").lower() != "mcp" or not any(h in url for h in ("127.0.0.1", "localhost")):
         return ""
+    if os.getenv("SANDBOX_WORLD", "dubai").lower() == "amman":
+        return ""  # Amman mode: the sandbox builds the cart she asked for, so differences are real again
     return ("\n\nTest mode: this is Careem's MCP sandbox, which answers with a fixed test basket. After "
             "cart_get_basket_price, read back exactly what the priced basket contains (items, quantities, total, address) "
             "in one short sentence and ask for a yes. Do not point out differences from what the user asked for and do "
@@ -24,14 +37,17 @@ def sandbox_note():
 # how to confirm depends on the Careem path: careem.py (mcp-all) proposes the exact checkout; careem_mcp.py (mcp)
 # and the mocks only take who confirms, and the checkout is built from the priced basket by the gate
 CONFIRM_ALL = ("- Nothing is ordered or booked until it is confirmed: call request_confirmation with the exact checkout_tool, "
-               "checkout_args, total and a one-line summary, then stop and wait. Ask the user herself (by='user') by default; "
-               "ask the family member who usually confirms only when the user asks for that or a tool says the family must "
-               "approve. The person an order is sent to (e.g. food sent to Khaled) is not the one who confirms it. When the user "
-               "says yes the system places the order. Never retry a failed checkout on your own; tell the user what went wrong.")
+               "checkout_args, total and a one-line summary; then stop and wait. Ask the user herself (by='user') by default: then "
+               "she can say yes, or the family member who usually confirms can approve in their app, whoever is first. Ask only "
+               "the family member when the user asks for that or a tool says the family must approve. The person an order is "
+               "sent to (e.g. food sent to Khaled) is not the one who confirms it. When the user says yes the system places the "
+               "order. Never retry a failed checkout on your own; tell the user what went wrong.")
 CONFIRM_GROCERY = ("- Nothing is ordered until it is confirmed: get the basket price first, then call request_confirmation and stop "
-                   "and wait. Ask the user herself (by='user') by default; ask the family member who usually confirms only when the "
-                   "user asks for that or a tool says the family must approve. Only call place_order when the user has just said "
-                   "yes; a family member approves in their own app. Never retry a failed checkout on your own.")
+                   "and wait. Ask the user herself (by='user') by default: then she can say yes, or the family member who "
+                   "usually confirms can approve in their app, whoever is first (say this in a few words). Ask only the family "
+                   "member (by=<their name>) when the user asks for that or a tool says the family must approve. Only call "
+                   "place_order when the user has just said yes; a family member approves in their own app. Never retry a "
+                   "failed checkout on your own.")
 
 
 def prompt(file, **kw):
@@ -78,8 +94,9 @@ class Brain:
                       if advice["cold_start"] else "",
                       style=advice["style"], style_hint=advice["style_hint"], offer=offer,
                       orders=self.orders_text(user_id),
-                      confirm_rules=CONFIRM_ALL if hasattr(self.tools, "execute_pending") else CONFIRM_GROCERY, ride=ride_text(advice.get("usual_ride")) if getattr(self.tools, "rides", True) else "rides are not available yet",
-                      box=box_text(advice.get("usual_box")), places=self.places_text()) + sandbox_note()
+                      confirm_rules=CONFIRM_ALL if hasattr(self.tools, "execute_pending") else CONFIRM_GROCERY,
+                      ride=ride_text(advice.get("usual_ride")) if getattr(self.tools, "rides", True) else "rides are not available yet",
+                      box=box_text(advice.get("usual_box")), places=self.places_text()) + sandbox_note() + SPEED_RULE
 
     def places_text(self):
         places = getattr(self.tools, "places", None) or {}
@@ -90,8 +107,17 @@ class Brain:
         pending = self.store.state["pending"].get(user_id)
         if pending and pending.get("tool"):
             lines.append(f"- waiting for {pending['by']} to approve: {pending['summary']} ({pending['total']} {pending['currency']})")
-        elif pending:
+        elif pending and "total_jod" in (pending.get("cart") or {}):  # mock cart
             lines.append(f"- waiting for {pending['by']} to approve: {pending['cart']['total_jod']} JOD")
+        elif pending:  # Careem MCP grocery basket (CAREEM_PROVIDER=mcp): Careem's own total and currency
+            from .careem_mcp import CareemMCPTools as M
+            cart = pending.get("cart") or {}
+            lines.append(f"- waiting for {pending['by']} to approve: Quik groceries basket ({M.total(cart)} {M.currency(cart)})")
+        # Careem MCP grocery orders (else the agent never hears that the family already approved and asks again)
+        for o in list((self.store.state.get("mcp", {}).get(user_id) or {}).get("done", {}).values())[-3:][::-1]:
+            cur = (o.get("careem") or {}).get("currency")
+            lines.append(f"- groceries placed {o['ts'].replace('T', ' ')}, approved by {o['confirmed_by']}: "
+                         f"Quik basket ({o.get('total')}{' ' + cur if cur else ''})")
         for o in [o for o in self.store.state.get("service_orders", []) if o["user_id"] == user_id][-3:][::-1]:
             lines.append(f"- {o['service']} {'placed' if o['ok'] else 'FAILED'} {o['ts'].replace('T', ' ')}, approved by "
                          f"{o['confirmed_by']}: {o['summary']} ({o['total']} {o['currency']})")
@@ -113,13 +139,16 @@ class Brain:
 
     def handle(self, user_id, text, now):
         self.turn += 1
+        start = time.monotonic()
         steps = [{"step": "1 hear", "text": text}]
         self.memory.seed(user_id)
 
-        facts = self.memory.recall(user_id, text)
-        steps.append({"step": "2 remember", "facts": [f["fact"] for f in facts]})
-
+        t0 = time.monotonic()
+        recall = BACKGROUND.submit(self.memory.recall, user_id, text)  # AgentCore search runs while the layer advises
         advice = self.layer.advise(user_id, now)
+        advise_ms = ms(t0)
+        facts = recall.result()
+        steps.append({"step": "2 remember", "facts": [f["fact"] for f in facts], "ms": ms(t0)})
         open_reminder = [e for e in self.store.events(user_id, "reminder") if "reply" not in e]
         note = ""
         if open_reminder:  # the user's answer to our reminder is the bandit's reward
@@ -145,7 +174,8 @@ class Brain:
                      + "\nTell them the outcome in one or two sentences. Do not ask for confirmation again and do not "
                        "call request_confirmation or place_order for it.")
         steps.append({"step": "3 advise", "running_out": [p["item_id"] for p in advice["running_out"]],
-                      "style": advice["style"], "offer": advice["offer"], "offer_decision": advice["offer_decision"]})
+                      "style": advice["style"], "offer": advice["offer"], "offer_decision": advice["offer_decision"],
+                      "ms": advise_ms})
 
         msgs = self.history.setdefault(user_id, [])
         msgs.append({"role": "user", "content": text})
@@ -153,10 +183,11 @@ class Brain:
         ctx = {"user_id": user_id, "now": now, "text": text, "turn": self.turn}
         reply = ""
         for _ in range(MAX_TOOL_ROUNDS):
+            t0 = time.monotonic()
             msg, meta = self.llm.chat(convo, self.tools.schemas())
             calls = msg.tool_calls or []
             steps.append({"step": "4 think", "model": meta["model"], "said": msg.content,
-                          "tool_calls": [c.function.name for c in calls]})
+                          "tool_calls": [c.function.name for c in calls], "ms": ms(t0)})
             if not calls:
                 reply = (msg.content or "").strip()
                 break
@@ -164,23 +195,26 @@ class Brain:
                           "tool_calls": [{"id": c.id, "type": "function",
                                           "function": {"name": c.function.name, "arguments": c.function.arguments}} for c in calls]})
             for c in calls:
+                t0 = time.monotonic()
                 try:
                     args = json.loads(c.function.arguments or "{}")
                     result = self.tools.run(c.function.name, args, ctx)
                 except json.JSONDecodeError:
                     args, result = None, {"error": "arguments were not valid JSON"}
                 kind = "6 confirm" if c.function.name in ("request_confirmation", "place_order") else "5 act"
-                steps.append({"step": kind, "tool": c.function.name, "args": args, "result": result})
+                steps.append({"step": kind, "tool": c.function.name, "args": args, "result": result, "ms": ms(t0)})
                 convo.append({"role": "tool", "tool_call_id": c.id, "content": json.dumps(result, ensure_ascii=False)})
         else:
             reply = "عذراً، صار في مشكلة. رح أحاول مرة ثانية." if self.store.users[user_id]["lang"] != "en" else "Sorry, something went wrong."
         msgs.append({"role": "assistant", "content": reply})
 
-        stored, why = self.memory.learn(user_id, text)
-        steps.append({"step": "7 learn (memory)", "stored": stored, "reason": why})
-        if not stored and why.startswith("sensitive"):
+        ok, why = g.safe_to_remember(text)  # local check, instant
+        if ok:  # the AgentCore / Mem0 write happens after the reply goes out, so the user doesn't wait for it
+            BACKGROUND.submit(self.memory.learn, user_id, text)
+        else:
             self.store.log(user_id, "guardrail", now, check="memory", ok=False, reason=why)
-        return {"reply": reply, "steps": steps}
+        steps.append({"step": "7 learn (memory)", "stored": "in background" if ok else False, "reason": "ok" if ok else why})
+        return {"reply": reply, "steps": steps, "ms": ms(start)}
 
     def reminder(self, user_id, now):
         """Proactive voice note when items run out (bandit picks the style, uplift decides the offer)."""

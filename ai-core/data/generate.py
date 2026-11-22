@@ -37,8 +37,8 @@ CATALOG = [
 USERS = {
     "um_khaled": {
         "name": "Um Khaled", "name_ar": "أم خالد", "age": 68, "lang": "ar", "city": "Amman",
-        "family": [{"name": "Khaled", "relation": "son", "pays": True, "can_confirm": True},
-                   {"name": "Abu Khaled", "relation": "husband", "pays": False, "can_confirm": False}],
+        "family": [{"name": "Khaled", "name_ar": "خالد", "relation": "son", "pays": True, "can_confirm": True},
+                   {"name": "Abu Khaled", "name_ar": "أبو خالد", "relation": "husband", "pays": False, "can_confirm": False}],
         "confirm_by": "Khaled",
         # item: (median gap days, qty)
         "rhythm": {"bread_small": (2, 2), "milk": (4, 1), "labneh": (6, 1), "tomatoes": (4, 1), "eggs": (10, 1),
@@ -47,7 +47,7 @@ USERS = {
     },
     "abu_sami": {
         "name": "Abu Sami", "name_ar": "أبو سامي", "age": 74, "lang": "mix", "city": "Irbid",
-        "family": [{"name": "Rana", "relation": "daughter", "pays": True, "can_confirm": True}],
+        "family": [{"name": "Rana", "name_ar": "رنا", "relation": "daughter", "pays": True, "can_confirm": True}],
         "confirm_by": "Rana",
         "rhythm": {"bread_big": (2, 1), "laban": (5, 1), "hummus": (10, 2), "coffee": (18, 1), "sugar": (24, 1),
                    "chicken": (7, 1), "cucumbers": (5, 1), "tissues": (25, 1)},
@@ -55,7 +55,7 @@ USERS = {
     },
     "new_user": {
         "name": "Hajjeh Fatima", "name_ar": "الحجة فاطمة", "age": 71, "lang": "ar", "city": "Zarqa",
-        "family": [{"name": "Omar", "relation": "grandson", "pays": True, "can_confirm": True}],
+        "family": [{"name": "Omar", "name_ar": "عمر", "relation": "grandson", "pays": True, "can_confirm": True}],
         "confirm_by": "Omar", "rhythm": {}, "usual_hour": 10, "price_sensitivity": 0.6,
     },
     "lina": {

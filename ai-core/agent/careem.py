@@ -235,7 +235,9 @@ class CareemTools:
         self.store.log(uid, "confirmation_requested", ctx["now"], by=by, tool=checkout_tool)
         return {"status": "waiting", "by": by, "summary": summary, "total": real_total, "currency": real_currency,
                 "note": "tell the user it is waiting for confirmation; do not say it is ordered"
-                if by != self.store.users[uid]["name"] else "ask the user to say yes to confirm"}
+                if by != self.store.users[uid]["name"] else
+                f"ask the user to say yes to confirm; {self.store.users[uid].get('confirm_by', 'the family')} can also "
+                "approve it in their app, whoever is first"}
 
     def _real_price(self, uid, tool, args):
         """(total, currency, problem) from Careem's own answers, tied to this exact checkout: the ride quote, the

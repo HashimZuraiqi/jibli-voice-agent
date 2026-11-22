@@ -90,7 +90,8 @@ class Tools:
         self.store.log(uid, "confirmation_requested", ctx["now"], by=by)
         return {"status": "waiting", "by": by, "cart": self.store.cart_view(uid),
                 "note": "tell the user it is waiting for confirmation; do not place the order yet" if by != self.store.users[uid]["name"]
-                else "ask the user to say yes to confirm"}
+                else f"ask the user to say yes to confirm; {self.store.users[uid].get('confirm_by', 'the family')} can also "
+                     "approve it in their app, whoever is first"}
 
     def t_place_order(self, ctx, confirmed_by):
         uid = ctx["user_id"]

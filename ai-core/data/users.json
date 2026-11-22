@@ -10,13 +10,15 @@
     "name": "Khaled",
     "relation": "son",
     "pays": true,
-    "can_confirm": true
+    "can_confirm": true,
+    "name_ar": "خالد"
    },
    {
     "name": "Abu Khaled",
     "relation": "husband",
     "pays": false,
-    "can_confirm": false
+    "can_confirm": false,
+    "name_ar": "أبو خالد"
    }
   ],
   "confirm_by": "Khaled",
@@ -34,7 +36,8 @@
     "name": "Rana",
     "relation": "daughter",
     "pays": true,
-    "can_confirm": true
+    "can_confirm": true,
+    "name_ar": "رنا"
    }
   ],
   "confirm_by": "Rana",
@@ -52,7 +55,8 @@
     "name": "Omar",
     "relation": "grandson",
     "pays": true,
-    "can_confirm": true
+    "can_confirm": true,
+    "name_ar": "عمر"
    }
   ],
   "confirm_by": "Omar",

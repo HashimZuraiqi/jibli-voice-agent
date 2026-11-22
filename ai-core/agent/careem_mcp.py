@@ -249,6 +249,14 @@ class CareemMCPTools:
 
     @staticmethod
     def total(basket):
+        # the basket total first (Careem: price.total / price.price.total), never an item's price
+        node = basket if isinstance(basket, dict) else {}
+        for path in (("price", "price", "total"), ("price", "total"), ("basket", "price", "total"), ("total",)):
+            v = node
+            for key in path:
+                v = v.get(key) if isinstance(v, dict) else None
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                return float(v)
         for k, v in flatten(basket).items():
             if norm_key(k) in TOTAL_KEYS:
                 try:
@@ -284,14 +292,19 @@ class CareemMCPTools:
         self.store.log(uid, "confirmation_requested", ctx["now"], by=by)
         self.store.save()
         return {"status": "waiting", "by": by, "basket": basket,
-                "note": "ask the user to say yes to confirm" if by == name
+                "note": f"ask the user to say yes to confirm; {self.family_confirmer(uid)} can also approve it in their app, "
+                        "whoever is first" if by == name
                 else "tell the user it is waiting for confirmation; do not place the order yet"}
+
+    def family_confirmer(self, uid):
+        u = self.store.users[uid]
+        return u.get("confirm_by") or next((f["name"] for f in u["family"] if f.get("can_confirm")), "the family")
 
     def check(self, uid, by, user_text=None, turn=None):
         st, pending = self.st(uid), self.store.state["pending"].get(uid)
         if not pending:
             return False, "ask for confirmation first (request_confirmation), then wait for the answer"
-        if pending["by"] != by:
+        if not g.may_answer(self.store, uid, pending, by):
             return False, f"confirmation was requested from {pending['by']}, not {by}"
         if not st["basket"] or self.fingerprint(st["basket"]) != pending["basket"]:
             return False, "the cart changed after confirmation was requested; ask again"
@@ -342,7 +355,10 @@ class CareemMCPTools:
             # resolves itself, so a guess (the LLM once sent city_id=0) must never reach checkout.
             seen = {**typed, **answers} if prop in required else answers
             # the price must come from the basket that was confirmed, never from an older answer
-            v = next((basket[a] for a in ALIASES.get(key, ()) if a in basket), None)
+            if key == "totalprice":  # the confirmed basket's total, never one item's price
+                v = self.total(st["basket"])
+            else:
+                v = next((basket[a] for a in ALIASES.get(key, ()) if a in basket), None)
             if v is None and key not in ALIASES:
                 v = next((seen[a] for a in SEEN_ALIASES.get(key, (key,)) if a in seen), None)
             if v is None:
