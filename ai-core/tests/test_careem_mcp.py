@@ -146,3 +146,61 @@ def test_spend_cap_converts_sandbox_aed(tmp_path):
     build_cart(tools)
     tools.run("request_confirmation", {"by": "Khaled"}, ctx(1))
     assert "cap" in tools.family_checkout("um_khaled", "Khaled", NOW)["reason"]
+
+
+def test_checkout_args_use_sandbox_names_for_timezone_and_payment(tmp_path):
+    """Careem names: user_info.city_timezone -> timezone, price payment_method.{id,type} -> payment_id/payment_type."""
+    store, fake, tools = setup(tmp_path)
+    tools.checkout_tool = {"inputSchema": {"type": "object", "required": ["basket_id", "total_price"], "properties": {
+        "basket_id": {}, "total_price": {}, "timezone": {}, "currency": {}, "payment_id": {}, "payment_type": {}}}}
+    st = tools.st("um_khaled")
+    st["seen"].update({"city_timezone": "Asia/Dubai", "city_currency": "AED", "payment_type": "COD"})
+    st["basket"] = {"basket": {"id": 6000002}, "price": {"total": 45.5},
+                    "payment_method": {"type": "card", "id": 4242}}
+    st["seen"]["basket_id"] = 6000002
+    args, missing = tools.checkout_args("um_khaled")
+    assert missing == []
+    assert args == {"basket_id": 6000002, "total_price": 45.5, "timezone": "Asia/Dubai", "currency": "AED",
+                    "payment_id": 4242, "payment_type": "card"}  # payment from the priced basket, not the LLM's COD
+
+
+def test_reading_the_cart_does_not_cancel_confirmation(tmp_path):
+    """Live sandbox run: on "yes" the LLM re-read the basket (cart_get_quik_basket) and that wiped the pending order."""
+    store, fake, tools = setup(tmp_path)
+    build_cart(tools)
+    tools.run("request_confirmation", {"by": "user"}, ctx(1))
+    tools.remote["cart_get_quik_basket"] = {"name": "cart_get_quik_basket", "description": "", "inputSchema": {}}
+    tools.run("cart_get_quik_basket", {}, ctx(2, "اه"))
+    tools.run("cart_get_basket_price", {}, ctx(2, "اه"))  # same basket priced again
+    assert tools.run("request_confirmation", {"by": "user"}, ctx(2, "اه"))["note"].startswith("already asked")
+    r = tools.run("place_order", {"confirmed_by": "user"}, ctx(2, "اه"))
+    assert r["status"] == "ordered" and [c for c in fake.calls if c[0] == CHECKOUT]
+
+
+def test_same_basket_again_is_not_reordered_and_clears_the_request(tmp_path):
+    """The static sandbox returns the same basket every time: a second confirmation must not order it again."""
+    store, fake, tools = setup(tmp_path)
+    build_cart(tools)
+    tools.run("request_confirmation", {"by": "user"}, ctx(1))
+    assert tools.run("place_order", {"confirmed_by": "user"}, ctx(2, "اه"))["status"] == "ordered"
+    tools.run("cart_get_basket_price", {"cart_id": "C42"}, ctx(3))  # identical basket priced again
+    tools.run("request_confirmation", {"by": "Khaled"}, ctx(3))
+    r = tools.family_checkout("um_khaled", "Khaled", NOW)
+    assert r["note"] == "already ordered" and len(checkouts(fake)) == 1
+    assert "um_khaled" not in store.state["pending"]
+
+
+def test_careem_answers_beat_llm_arguments(tmp_path):
+    """Live sandbox run: the LLM passed city_id=0 to the price call and checkout got 0 instead of user_info's 1."""
+    store, fake, tools = setup(tmp_path)
+    tools.checkout_tool = {"inputSchema": {"type": "object", "required": ["cart_id", "lat"],
+                                           "properties": {"cart_id": {}, "lat": {}, "city_id": {}}}}
+    fake.call = lambda name, args: {"city_id": 1} if name == "user_info" else {"cart_id": "C42"}
+    tools.run("user_info", {}, ctx(1))
+    tools.run("cart_get_basket_price", {"city_id": 0, "lat": 25.08}, ctx(1))
+    args, missing = tools.checkout_args("um_khaled")
+    assert args == {"cart_id": "C42", "lat": 25.08, "city_id": 1} and missing == []  # lat only came from args
+    # user_info without a location has no city: the LLM's guess is still not used for an optional arg
+    store.state["mcp"]["um_khaled"]["seen"].pop("city_id")
+    args, missing = tools.checkout_args("um_khaled")
+    assert args == {"cart_id": "C42", "lat": 25.08} and missing == []

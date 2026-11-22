@@ -5,7 +5,7 @@ from pathlib import Path
 from .personalization import guardrails as g
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
-MAX_TOOL_ROUNDS = 6
+MAX_TOOL_ROUNDS = 12  # the real Careem chain (user_info, searches, cart, price, confirm, order) needs ~9
 
 
 def prompt(file, **kw):
