@@ -9,7 +9,7 @@ MAX_TOOL_ROUNDS = 6
 
 
 def prompt(file, **kw):
-    text = (PROMPTS / f"{file}.txt").read_text()
+    text = (PROMPTS / f"{file}.txt").read_text(encoding="utf-8")
     for k, v in kw.items():
         text = text.replace("{" + k + "}", str(v))
     return text

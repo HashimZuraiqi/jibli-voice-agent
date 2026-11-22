@@ -19,7 +19,7 @@ class OfferModel:
             # safe: only this app writes this file, into its own state/ folder
             self.model = pickle.loads(path.read_bytes())
         else:
-            logs = json.loads((DATA / "uplift_logs.json").read_text())
+            logs = json.loads((DATA / "uplift_logs.json").read_text(encoding="utf-8"))
             self.model = BaseTClassifier(learner=GradientBoostingClassifier(max_depth=2, n_estimators=150, random_state=7), control_name="control")
             self.model.fit(X=np.array([r["features"] for r in logs]), treatment=np.array([r["treatment"] for r in logs]),
                            y=np.array([r["ordered"] for r in logs]))
