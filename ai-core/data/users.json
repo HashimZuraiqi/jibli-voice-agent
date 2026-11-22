@@ -8,17 +8,17 @@
   "family": [
    {
     "name": "Khaled",
+    "name_ar": "خالد",
     "relation": "son",
     "pays": true,
-    "can_confirm": true,
-    "name_ar": "خالد"
+    "can_confirm": true
    },
    {
     "name": "Abu Khaled",
+    "name_ar": "أبو خالد",
     "relation": "husband",
     "pays": false,
-    "can_confirm": false,
-    "name_ar": "أبو خالد"
+    "can_confirm": false
    }
   ],
   "confirm_by": "Khaled",
@@ -34,10 +34,10 @@
   "family": [
    {
     "name": "Rana",
+    "name_ar": "رنا",
     "relation": "daughter",
     "pays": true,
-    "can_confirm": true,
-    "name_ar": "رنا"
+    "can_confirm": true
    }
   ],
   "confirm_by": "Rana",
@@ -53,10 +53,10 @@
   "family": [
    {
     "name": "Omar",
+    "name_ar": "عمر",
     "relation": "grandson",
     "pays": true,
-    "can_confirm": true,
-    "name_ar": "عمر"
+    "can_confirm": true
    }
   ],
   "confirm_by": "Omar",
