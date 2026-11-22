@@ -267,6 +267,15 @@ class Say(BaseModel):
     time: str | None = None
 
 
+@app.post("/api/speak")
+def speak_text(m: Say):
+    """Speak a short line the page writes itself (e.g. «تمام، خالد وافق…») with the same voice as the replies (Leva),
+    so the page never switches voices. audio_b64 is null when the browser should speak it."""
+    check_user(m.user_id)
+    audio_b64, mime = spoken(m.text.strip()[:400]) if m.text.strip() else (None, None)
+    return {"audio_b64": audio_b64, "audio_mime": mime}
+
+
 @app.post("/api/say")
 def say(m: Say):
     """Typed text or a tapped yes / no button on the voice page: same brain, spoken reply."""

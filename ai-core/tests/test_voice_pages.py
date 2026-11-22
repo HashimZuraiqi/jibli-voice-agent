@@ -108,3 +108,13 @@ def test_progress_shows_what_jibli_is_doing(client):
     assert "خبز" in p["text"] and "حليب" in p["text"] and p["n"] >= 1
     client.app_module.S["brain"].progress("um_khaled", "tool", name="cart_get_basket_price")
     assert "المجموع" in client.get("/api/progress/um_khaled").json()["text"]
+
+
+def test_speak_uses_the_server_voice_for_page_lines(client, monkeypatch):
+    # browser voice: no audio, the page speaks it itself
+    assert client.post("/api/speak", json={"user_id": "um_khaled", "text": "تمام، خالد وافق"}).json()["audio_b64"] is None
+    # server voice (Leva / Anas): the page's own lines get the same voice as the replies
+    monkeypatch.setenv("TTS_PROVIDER", "func")
+    monkeypatch.setenv("TTS_FUNC", "fake_speech:tts")
+    r = client.post("/api/speak", json={"user_id": "um_khaled", "text": "تمام، خالد وافق"}).json()
+    assert r["audio_b64"] and r["audio_mime"] == "audio/wav"

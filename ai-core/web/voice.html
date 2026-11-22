@@ -105,6 +105,15 @@ function bestArabicVoice() {
     + (["ar-sy", "ar-lb", "ar-ps"].includes(v.lang.toLowerCase()) ? 10 : 0);  // other Levantine voices
   return all.sort((a, b) => score(b) - score(a))[0];
 }
+// Lines the page writes itself (the family approved / declined) use the same server voice as the replies (Leva);
+// if that fails or is off, the browser voice says it.
+async function speakLine(text) {
+  try {
+    const r = await (await fetch("/api/speak", {method:"POST", headers:{"Content-Type":"application/json"},
+                                                body: JSON.stringify({user_id: USER, text})})).json();
+    play({reply: text, audio_b64: r.audio_b64, audio_mime: r.audio_mime});
+  } catch (e) { browserSay(text); }
+}
 function browserSay(text) {
   if (!("speechSynthesis" in window) || !text) return;
   speechSynthesis.cancel();
@@ -239,7 +248,7 @@ async function poll() {
       const declined = v.last.kind === "confirmation_declined";
       const msg = declined ? `${by || "العيلة"} ما وافق على الطلب، فما انطلب شي. بدك نغيّر إشي؟`
                            : `تمام، ${by ? `${by} وافق و` : ""}الطلب انبعت. بيوصلك قريب.`;
-      add("bot", msg); browserSay(msg);
+      add("bot", msg); speakLine(msg);
       $("cards").innerHTML = declined ? `<div class="card declined">❌ ما انطلب شي</div>` : DONE;
     } else render(v);
     wasWaiting = v.waiting;
