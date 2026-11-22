@@ -92,7 +92,7 @@ def test_family_member_without_permission_cannot_confirm(store):
 
 
 def test_spend_cap(store):
-    store.cart("um_khaled")["olive_oil"] = 6  # 36 JOD
+    store.cart("um_khaled")["olive_oil"] = 9  # 54 JOD, over the 50 JOD cap
     store.state["pending"]["um_khaled"] = {"by": "Khaled", "turn": 0}
     ok, reason = g.can_place_order(store, "um_khaled", "Khaled")
     assert not ok and "cap" in reason

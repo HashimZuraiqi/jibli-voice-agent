@@ -127,7 +127,7 @@ def test_ride_quote_and_booking(tools):
 
 
 def test_spend_cap_in_aed(tools):
-    tools.store.state["pending"]["um_khaled"] = {"by": "Khaled", "tool": "box_create_order", "total": 200.0, "currency": "AED"}
+    tools.store.state["pending"]["um_khaled"] = {"by": "Khaled", "tool": "box_create_order", "total": 300.0, "currency": "AED"}  # over the 259 AED (~50 JOD) cap
     ok, reason = g.can_place_order(tools.store, "um_khaled", "Khaled")
     assert not ok and "cap" in reason
 

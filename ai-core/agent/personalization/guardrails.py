@@ -5,8 +5,8 @@ import re
 
 from ..store import parse_ts
 
-SPEND_CAPS = {"JOD": 30.0, "AED": 150.0}  # per order; the Careem sandbox prices in AED (150 AED is about 29 JOD)
-SPEND_CAP_JOD = SPEND_CAPS["JOD"]  # used by careem_mcp.py (groceries in JOD)
+SPEND_CAPS = {"JOD": 50.0, "AED": 259.0}  # per order, about 50 JOD each (team decision); the Careem sandbox prices in AED
+SPEND_CAP_JOD = SPEND_CAPS["JOD"]  # careem_mcp.py converts the basket currency to JOD and checks this
 QUIET_HOURS = (22, 8)  # no reminders from 22:00 to 08:00
 OFFER_EVERY_DAYS = 7
 YES_WORDS = {"yes", "yeah", "ok", "okay", "sure", "confirm", "نعم", "اه", "ايوا", "ايوه", "تمام",

@@ -36,8 +36,15 @@ TOTAL_KEYS = ("total", "totalprice", "baskettotal", "grandtotal", "amount")
 DEFAULT_ALLOWED = ("user_info,get_activities,track_activity,is_grocery_area_serviceable,search_groceries_items,"
                    "search_groceries_get_top_user_items,search_groceries_get_all_deals,"
                    "create_grocery_cart_with_quantities,cart_get_quik_basket,cart_get_basket_price,cart_get_checkout_promos")
-# checkout argument -> keys from earlier answers that hold its value (normalized: lowercase, no _ or -)
-ALIASES = {"totalprice": ("totalprice", "total", "baskettotal", "grandtotal")}
+# checkout argument -> keys that hold its value (normalized: lowercase, no _ or -)
+# taken ONLY from the confirmed basket (cart_get_basket_price), never from an older answer:
+ALIASES = {"totalprice": ("totalprice", "total", "baskettotal", "grandtotal"),
+           "paymentid": ("paymentid", "paymentmethodid"),        # the card the basket was priced with
+           "paymenttype": ("paymenttype", "paymentmethodtype")}
+# taken from any earlier answer or argument (user_info gives city_timezone / city_currency):
+SEEN_ALIASES = {"timezone": ("timezone", "citytimezone"), "currency": ("currency", "citycurrency")}
+# the spend cap is in JOD; the sandbox prices in AED (fake Dubai data), production in the user's currency
+TO_JOD = {"JOD": 1.0, "JD": 1.0, "AED": 0.193, "SAR": 0.189, "USD": 0.709}
 LAT_KEYS, LNG_KEYS = ("lat", "latitude"), ("lng", "lon", "long", "longitude")
 
 
@@ -80,6 +87,21 @@ class MCPConnector:
         async with Client(self.transport_for_url()) as c:
             return await fn(c)
 
+        if self.transport == "sse":
+            from mcp.client.sse import sse_client
+            async with sse_client(self.url, headers=self.headers) as streams:
+                return await run(streams)
+        try:  # mcp >= 2: headers go on an httpx2 client we pass in (and close ourselves)
+            from mcp.client.streamable_http import streamable_http_client
+            from mcp.shared._httpx_utils import create_mcp_http_client
+        except ImportError:  # mcp 1.x
+            from mcp.client.streamable_http import streamablehttp_client
+            async with streamablehttp_client(self.url, headers=self.headers) as streams:
+                return await run(streams)
+        async with create_mcp_http_client(headers=self.headers) as http:
+            async with streamable_http_client(self.url, http_client=http) as streams:
+                return await run(streams)
+
     def list_tools(self):
         async def go(c):
             return [{"name": t.name, "description": t.description or "", "inputSchema": t.input_schema or {"type": "object"}}
@@ -101,6 +123,12 @@ class MCPConnector:
                 return {"error": out}
             return out
         return asyncio.run(self._session(go))
+
+
+def is_cart_change(name):
+    """Tools that change the basket. Reads (cart_get_basket_price, cart_get_quik_basket, cart_get_checkout_promos, ...)
+    don't, so re-checking the cart before checkout must not cancel the confirmation."""
+    return ("cart" in name and not name.startswith("cart_get_")) or name == "create_grocery_cart_with_quantities"
 
 
 def flatten(obj, out=None):
@@ -186,12 +214,13 @@ class CareemMCPTools:
         except Exception as e:
             return {"error": f"Careem MCP call failed: {type(e).__name__}: {str(e)[:200]}"}
         st = self.st(uid)
-        flatten(args, st["seen"])
+        # what Careem answered beats what the LLM typed (it once sent city_id=0 over user_info's real city_id=1)
+        flatten(args, st.setdefault("args", {}))
         if isinstance(result, dict) and "error" not in result:
             flatten(result, st["seen"])
         if name == PRICE and "error" not in result:
             st["basket"] = result
-        elif "cart" in name and name != PRICE:  # any cart change needs a new price and a new confirmation
+        elif is_cart_change(name):  # any cart change needs a new price and a new confirmation
             st["basket"] = None
             self.store.state["pending"].pop(uid, None)
         self.store.save()
@@ -212,6 +241,13 @@ class CareemMCPTools:
                     pass
         return None
 
+    @staticmethod
+    def currency(basket):
+        for k, v in flatten(basket).items():
+            if norm_key(k) in ("currency", "currencycode") and isinstance(v, str):
+                return v.upper()
+        return "JOD"
+
     def request_confirmation(self, ctx, by):
         uid = ctx["user_id"]
         basket = self.st(uid)["basket"]
@@ -221,6 +257,12 @@ class CareemMCPTools:
         by = name if by.lower() in ("user", "me", name.lower()) else by
         if by not in g.allowed_confirmers(self.store, uid):
             return {"error": f"{by} cannot confirm; allowed: {g.allowed_confirmers(self.store, uid)}"}
+        old = self.store.state["pending"].get(uid)
+        if old and old["by"] == by and old["basket"] == self.fingerprint(basket):
+            # asked again for the same basket: keep the original turn, so the yes that answered it still counts
+            return {"status": "waiting", "by": by, "basket": basket,
+                    "note": "already asked for this exact basket: if the user has just said yes, call place_order now"
+                    if by == name else "still waiting for the family member's approval; do not place the order"}
         self.store.state["pending"][uid] = {"by": by, "ts": ctx["now"].isoformat(timespec="minutes"), "turn": ctx.get("turn"),
                                             "basket": self.fingerprint(basket), "cart": basket}
         self.store.log(uid, "confirmation_requested", ctx["now"], by=by)
@@ -237,9 +279,9 @@ class CareemMCPTools:
             return False, f"confirmation was requested from {pending['by']}, not {by}"
         if not st["basket"] or self.fingerprint(st["basket"]) != pending["basket"]:
             return False, "the cart changed after confirmation was requested; ask again"
-        total = self.total(st["basket"])
-        if total is not None and total > g.SPEND_CAP_JOD:
-            return False, f"total {total} JOD is over the {g.SPEND_CAP_JOD} JOD cap"
+        total, cur = self.total(st["basket"]), self.currency(st["basket"])
+        if total is not None and total * TO_JOD.get(cur, 1.0) > g.SPEND_CAP_JOD:
+            return False, f"total {total} {cur} is over the {g.SPEND_CAP_JOD} JOD cap"
         if total is None and by == self.store.users[uid]["name"]:
             return False, "the basket total is unknown; the family member must approve it in their app"
         if by == self.store.users[uid]["name"]:
@@ -272,21 +314,26 @@ class CareemMCPTools:
 
     def checkout_args(self, uid):
         schema = self.checkout_tool["inputSchema"] or {}
-        filled = self.with_location(uid, schema, {})
-        seen = {norm_key(k): v for k, v in self.st(uid)["seen"].items()}
-        basket = {norm_key(k): v for k, v in flatten(self.st(uid)["basket"] or {}).items()}
+        filled = self.with_location(uid, schema, {})  # lat/lng fallback: saved address or CAREEM_LAT / CAREEM_LNG
+        st, required = self.st(uid), set(schema.get("required", []))
+        answers = {norm_key(k): v for k, v in st["seen"].items()}
+        typed = {norm_key(k): v for k, v in st.get("args", {}).items()}
+        basket = {norm_key(k): v for k, v in flatten(st["basket"] or {}).items()}
         args, missing = {}, []
         for prop in (schema.get("properties") or {}):
             key = norm_key(prop)
+            # Careem's answers win; what the LLM typed only fills REQUIRED args (lat/lng). Optional ones Careem
+            # resolves itself, so a guess (the LLM once sent city_id=0) must never reach checkout.
+            seen = {**typed, **answers} if prop in required else answers
             # the price must come from the basket that was confirmed, never from an older answer
             v = next((basket[a] for a in ALIASES.get(key, ()) if a in basket), None)
             if v is None and key not in ALIASES:
-                v = seen.get(key)
+                v = next((seen[a] for a in SEEN_ALIASES.get(key, (key,)) if a in seen), None)
             if v is None:
                 v = filled.get(prop)  # lat/lng: saved address or CAREEM_LAT / CAREEM_LNG
             if v is not None:
                 args[prop] = v
-            elif prop in schema.get("required", []):
+            elif prop in required:
                 missing.append(prop)
         return args, missing
 
@@ -294,6 +341,8 @@ class CareemMCPTools:
         st = self.st(uid)
         fp = self.fingerprint(st["basket"])
         if fp in st["done"]:  # double tap / repeated yes: never order the same basket twice
+            self.store.state["pending"].pop(uid, None)  # the request is answered: don't leave it waiting
+            self.store.save()
             return {"status": "ordered", "order": st["done"][fp], "note": "already ordered"}
         if st.get("failed") == fp:  # it may have gone through on Careem's side: a human checks, then builds a new cart
             return {"status": "error", "error": "checkout already failed for this cart; check the Careem app, then make a new cart"}

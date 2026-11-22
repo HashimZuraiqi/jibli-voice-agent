@@ -11,15 +11,50 @@ Create the memory resource once with scripts/create_agentcore_memory.py and put 
 Credentials come from the environment like the LLM; the event's expire hourly, so an expired token reloads .env once.
 """
 import datetime as dt
+import json
 import os
 import uuid
 from pathlib import Path
 
-from .personalization.guardrails import safe_to_remember
+from .personalization.guardrails import safe_to_remember, says_yes, tokens
 
 ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 NAMESPACES = ("/users/{uid}/facts/", "/users/{uid}/preferences/")
 EXPIRED = {"ExpiredTokenException", "ExpiredToken", "UnrecognizedClientException", "InvalidSignatureException"}
+
+
+QUESTION_WORDS = {"شو", "ليش", "كيف", "وين", "متى", "قديش", "قداش", "مين", "هل", "ايش", "what", "why", "how", "where",
+                  "when", "who", "which", "do", "does", "can", "is", "are"}
+# order requests and memory commands are not facts about the user (AgentCore still sees them as events)
+COMMAND_WORDS = {"ابعتلي", "ابعثلي", "جيبلي", "اطلبلي", "زيدلي", "ضيفلي", "شيل", "انسى", "امسح", "احذف",
+                 "send", "order", "add", "remove", "forget", "delete", "cancel"}
+
+
+QUESTION_WORDS = {t for w in QUESTION_WORDS for t in tokens(w)}  # same normalization as the message (ى -> ي ...)
+COMMAND_WORDS = {t for w in COMMAND_WORDS for t in tokens(w)}
+NO_START = {t for w in ("لا", "لاء", "مش", "بلاش", "no", "nope", "not", "dont", "later") for t in tokens(w)}
+
+
+def looks_like_fact(text):
+    """Only statements become instant records: not yes/no answers, questions, commands or very short replies.
+    E.g. «جوزي ما بوكل سكر» yes; «اه يا ريت», «شو بتعرف عني؟», «ابعتلي خبز» no."""
+    toks = tokens(text)
+    if len(toks) < 3 or says_yes(text) or text.strip().endswith(("?", "؟")):
+        return False
+    if toks[0] in QUESTION_WORDS or toks[0] in COMMAND_WORDS or toks[0] in NO_START:
+        return False  # «لا مش هلق» is an answer; «جوزي ما بوكل سكر» (no word later on) is a fact
+    return True
+
+
+def fact_text(record):
+    """The user-preference strategy stores JSON ({"context", "preference", "categories"}); show just the preference."""
+    text = record["content"]["text"]
+    if text.startswith("{"):
+        try:
+            return json.loads(text).get("preference") or text
+        except (ValueError, AttributeError):
+            pass
+    return text
 
 
 class AgentCoreMemory:
@@ -35,6 +70,11 @@ class AgentCoreMemory:
         self.instant = os.getenv("AGENTCORE_INSTANT_FACTS", "true").lower() == "true"
         self._client = client
         self._seeded = set()
+        # AgentCore's list/retrieve index lags writes by ~5-15 s, so remember our own recent writes and deletes
+        # and merge them in until the service catches up (else a fact learned this turn is missing next turn,
+        # and a fact deleted with × comes back on refresh)
+        self._pending = {}  # user_id -> {record_id: text} written but maybe not listed yet
+        self._deleted = {}  # user_id -> record ids deleted but maybe still listed
 
     # -- AWS plumbing --
     def client(self, fresh=False):
@@ -63,8 +103,16 @@ class AgentCoreMemory:
         now = dt.datetime.now(dt.timezone.utc)
         recs = [{"requestIdentifier": uuid.uuid4().hex[:32], "namespaces": [self.ns(user_id)[0]],
                  "content": {"text": f}, "timestamp": now} for f in facts]
-        if recs:
-            self.call("batch_create_memory_records", records=recs)
+        if not recs:
+            return
+        r = self.call("batch_create_memory_records", records=recs)
+        text = {rec["requestIdentifier"]: rec["content"]["text"] for rec in recs}
+        for ok in r.get("successfulRecords", []):
+            if ok.get("memoryRecordId") and ok.get("requestIdentifier") in text:
+                self._pending.setdefault(user_id, {})[ok["memoryRecordId"]] = text[ok["requestIdentifier"]]
+        if r.get("failedRecords"):
+            f = r["failedRecords"][0]
+            raise RuntimeError(f"memory record not stored: {f.get('errorCode')} {f.get('errorMessage', '')[:100]}")
 
     # -- same interface as the Mem0 UserMemory --
     def seed(self, user_id):
@@ -83,7 +131,7 @@ class AgentCoreMemory:
             now = dt.datetime.now(dt.timezone.utc)
             self.call("create_event", actorId=user_id, sessionId=f"{user_id}-{now:%Y%m%d}", eventTimestamp=now,
                       payload=[{"conversational": {"content": {"text": text}, "role": "USER"}}])
-            if self.instant:
+            if self.instant and looks_like_fact(text):
                 self._write(user_id, [text])
             return True, "ok"
         except Exception as e:  # a failed memory write must not break the conversation
@@ -99,16 +147,36 @@ class AgentCoreMemory:
                 continue  # recall is best effort: the agent still works without memory
             hits += r.get("memoryRecordSummaries", [])
         hits.sort(key=lambda h: h.get("score") or 0, reverse=True)
-        return [{"id": h["memoryRecordId"], "fact": h["content"]["text"]} for h in hits[:k]]
+        found = [{"id": h["memoryRecordId"], "fact": fact_text(h)} for h in hits
+                 if h["memoryRecordId"] not in self._deleted.get(user_id, ())]
+        # facts written seconds ago may not be searchable yet: put them first, newest first (this conversation)
+        if self._pending.get(user_id):
+            try:
+                self.all(user_id)  # drops the ones the service has indexed meanwhile
+            except Exception:
+                pass
+        ids = {f["id"] for f in found}
+        fresh = [{"id": i, "fact": t} for i, t in reversed(self._pending.get(user_id, {}).items()) if i not in ids]
+        return (fresh + found)[:k]
 
     def all(self, user_id):
+        out = self._list(user_id)
+        listed = {m["id"] for m in out}
+        pending = self._pending.get(user_id, {})
+        for i in [i for i in pending if i in listed]:
+            del pending[i]  # the service lists it now
+        deleted = self._deleted.setdefault(user_id, set())
+        deleted &= listed  # forget deletes the service no longer lists
+        return [m for m in out if m["id"] not in deleted] + [{"id": i, "fact": t} for i, t in pending.items()]
+
+    def _list(self, user_id):
         out = []
         for ns in self.ns(user_id):
             token = None
             while True:
                 kw = {"namespace": ns, "maxResults": 100, **({"nextToken": token} if token else {})}
                 r = self.call("list_memory_records", **kw)
-                out += [{"id": m["memoryRecordId"], "fact": m["content"]["text"]} for m in r.get("memoryRecordSummaries", [])]
+                out += [{"id": m["memoryRecordId"], "fact": fact_text(m)} for m in r.get("memoryRecordSummaries", [])]
                 token = r.get("nextToken")
                 if not token:
                     break
@@ -123,6 +191,8 @@ class AgentCoreMemory:
             ids = [memory_id]
         for i in ids:
             self.call("delete_memory_record", memoryRecordId=i)
+            self._deleted.setdefault(user_id, set()).add(i)
+            self._pending.get(user_id, {}).pop(i, None)
         if not memory_id:
             self._seeded.discard(user_id)  # a reset user gets the sign-up facts again
         return len(ids)

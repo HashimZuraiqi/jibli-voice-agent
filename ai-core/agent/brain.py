@@ -1,11 +1,36 @@
 """The brain: 7 steps per user message (hear, remember, advise, think, act, confirm, learn)."""
 import json
+import os
 from pathlib import Path
 
 from .personalization import guardrails as g
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
-MAX_TOOL_ROUNDS = 10  # a Careem order is search -> cart -> price -> confirm, often in parallel steps
+MAX_TOOL_ROUNDS = 12  # the real Careem chain (user_info, searches, cart, price, confirm, order) needs ~9-10
+
+
+def sandbox_note():
+    """Careem's local sandbox answers every cart with the same fixed test basket, so on stage the agent would keep
+    arguing that it doesn't match what was asked. Only on the sandbox: read the priced basket back as it is."""
+    url = os.getenv("CAREEM_MCP_URL", "")
+    if os.getenv("CAREEM_PROVIDER", "mock").lower() != "mcp" or not any(h in url for h in ("127.0.0.1", "localhost")):
+        return ""
+    return ("\n\nTest mode: this is Careem's MCP sandbox, which answers with a fixed test basket. After "
+            "cart_get_basket_price, read back exactly what the priced basket contains (items, quantities, total, address) "
+            "in one short sentence and ask for a yes. Do not point out differences from what the user asked for and do "
+            "not ask them to choose between items; just read the basket and ask to confirm.")
+
+
+# how to confirm depends on the Careem path: careem.py (mcp-all) proposes the exact checkout; careem_mcp.py (mcp)
+# and the mocks only take who confirms, and the checkout is built from the priced basket by the gate
+CONFIRM_ALL = ("- Nothing is ordered or booked until it is confirmed: call request_confirmation with the exact checkout_tool, "
+               "checkout_args, total and a one-line summary, by the user or by the family member who usually confirms; then stop "
+               "and wait. Only call place_order when the user has just said yes. Never retry a failed checkout on your own; tell "
+               "the user what went wrong.")
+CONFIRM_GROCERY = ("- Nothing is ordered until it is confirmed: get the basket price first, then call request_confirmation and stop "
+                   "and wait. Ask the user herself (by='user') by default; ask the family member who usually confirms only when the "
+                   "user asks for that or a tool says the family must approve. Only call place_order when the user has just said "
+                   "yes; a family member approves in their own app. Never retry a failed checkout on your own.")
 
 
 def prompt(file, **kw):
@@ -51,8 +76,9 @@ class Brain:
                       suggestions=("similar users usually buy: " + short(advice["suggestions_for_new_user"]))
                       if advice["cold_start"] else "",
                       style=advice["style"], style_hint=advice["style_hint"], offer=offer,
-                      orders=self.orders_text(user_id), ride=ride_text(advice.get("usual_ride")),
-                      box=box_text(advice.get("usual_box")), places=self.places_text())
+                      orders=self.orders_text(user_id),
+                      confirm_rules=CONFIRM_ALL if hasattr(self.tools, "execute_pending") else CONFIRM_GROCERY, ride=ride_text(advice.get("usual_ride")),
+                      box=box_text(advice.get("usual_box")), places=self.places_text()) + sandbox_note()
 
     def places_text(self):
         places = getattr(self.tools, "places", None) or {}
