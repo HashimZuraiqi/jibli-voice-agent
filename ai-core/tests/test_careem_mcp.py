@@ -204,3 +204,14 @@ def test_careem_answers_beat_llm_arguments(tmp_path):
     store.state["mcp"]["um_khaled"]["seen"].pop("city_id")
     args, missing = tools.checkout_args("um_khaled")
     assert args == {"cart_id": "C42", "lat": 25.08} and missing == []
+
+
+def test_sandbox_note_only_on_local_sandbox(monkeypatch):
+    from agent.brain import sandbox_note
+    monkeypatch.setenv("CAREEM_PROVIDER", "mock")
+    assert sandbox_note() == ""
+    monkeypatch.setenv("CAREEM_PROVIDER", "mcp")
+    monkeypatch.setenv("CAREEM_MCP_URL", "http://127.0.0.1:8787/mcp")
+    assert "fixed test basket" in sandbox_note()
+    monkeypatch.setenv("CAREEM_MCP_URL", "https://mcp.careemapis.com/mcp")
+    assert sandbox_note() == ""  # production: the agent must still point out real differences

@@ -1,11 +1,24 @@
 """The brain: 7 steps per user message (hear, remember, advise, think, act, confirm, learn)."""
 import json
+import os
 from pathlib import Path
 
 from .personalization import guardrails as g
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
 MAX_TOOL_ROUNDS = 12  # the real Careem chain (user_info, searches, cart, price, confirm, order) needs ~9
+
+
+def sandbox_note():
+    """Careem's local sandbox answers every cart with the same fixed test basket, so on stage the agent would keep
+    arguing that it doesn't match what was asked. Only on the sandbox: read the priced basket back as it is."""
+    url = os.getenv("CAREEM_MCP_URL", "")
+    if os.getenv("CAREEM_PROVIDER", "mock").lower() != "mcp" or not any(h in url for h in ("127.0.0.1", "localhost")):
+        return ""
+    return ("\n\nTest mode: this is Careem's MCP sandbox, which answers with a fixed test basket. After "
+            "cart_get_basket_price, read back exactly what the priced basket contains (items, quantities, total, address) "
+            "in one short sentence and ask for a yes. Do not point out differences from what the user asked for and do "
+            "not ask them to choose between items; just read the basket and ask to confirm.")
 
 
 def prompt(file, **kw):
@@ -39,7 +52,7 @@ class Brain:
                       running_out=short(advice["running_out"]), cold_start=advice["cold_start"],
                       suggestions=("similar users usually buy: " + short(advice["suggestions_for_new_user"]))
                       if advice["cold_start"] else "",
-                      style=advice["style"], style_hint=advice["style_hint"], offer=offer)
+                      style=advice["style"], style_hint=advice["style_hint"], offer=offer) + sandbox_note()
 
     def handle(self, user_id, text, now):
         self.turn += 1
