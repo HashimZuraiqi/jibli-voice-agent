@@ -128,7 +128,8 @@ class BedrockLLM:
     def chat(self, messages, tools=None):
         from botocore.exceptions import ClientError
         system, msgs = to_converse(messages)
-        kw = {"messages": msgs, "system": system, "inferenceConfig": {"temperature": 0, "maxTokens": self.max_tokens}}
+        # no temperature: Claude 5.5 models on Bedrock reject it (ValidationException)
+        kw = {"messages": msgs, "system": system, "inferenceConfig": {"maxTokens": self.max_tokens}}
         if tools:
             kw["toolConfig"] = to_tool_config(tools)
         last = None
