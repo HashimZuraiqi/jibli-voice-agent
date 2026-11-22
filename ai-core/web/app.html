@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>جيبلي · Careem</title>
+<link rel="icon" href="data:,">
+<style>
+:root {
+  --green:#00a651; --green-d:#008a43; --green-soft:#e3f6ea; --red:#e5484d; --amber:#f5a524;
+  --bg:#f2f2f7; --card:#ffffff; --ink:#111214; --muted:#6b7280; --line:#e5e7eb; --glass:rgba(255,255,255,.72);
+  --shadow:0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.08);
+  --spring:cubic-bezier(.2,.8,.2,1); --t:450ms;
+  --font:-apple-system, "SF Pro Text", "SF Arabic", system-ui, "Segoe UI", "Noto Sans Arabic", Tahoma, sans-serif;
+  --page:#d9dde3;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#000; --card:#1c1c1e; --ink:#f5f5f7; --muted:#9ca3af; --line:#2c2c2e; --glass:rgba(28,28,30,.72);
+          --green-soft:#0f2e1c; --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.5); --page:#0b0c0e; }
+}
+@media (prefers-reduced-motion: reduce) { :root { --t:1ms; } .done-check path { stroke-dashoffset:0 !important; animation:none !important; } *, *::before, *::after { animation-duration:1ms !important; transition-duration:1ms !important; } }
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { margin:0; height:100%; }
+body { font-family:var(--font); background:var(--page); color:var(--ink); display:flex; align-items:center; justify-content:center;
+       font-size:17px; line-height:1.45; }
+button { font:inherit; color:inherit; }
+
+/* ---------- device frame (390x844), full screen on a real phone ---------- */
+.device { position:relative; width:390px; height:844px; border-radius:56px; background:var(--bg); overflow:hidden;
+          box-shadow:0 0 0 12px #111, 0 0 0 13px #333, 0 30px 80px rgba(0,0,0,.35); }
+@media (max-width:500px), (max-height:700px) { .device { width:100vw; height:100dvh; border-radius:0; box-shadow:none; } .island { display:none; } }
+.island { position:absolute; top:11px; left:50%; transform:translateX(-50%); width:122px; height:35px; background:#000; border-radius:20px; z-index:50; }
+.statusbar { position:absolute; top:0; inset-inline:0; height:50px; display:flex; justify-content:space-between; align-items:center;
+             padding:4px 30px 0; font-size:15px; font-weight:600; z-index:40; direction:ltr; pointer-events:auto; }
+.statusbar .icons { display:flex; gap:6px; align-items:center; }
+.statusbar.light { color:#fff; }
+
+/* ---------- screens ---------- */
+.screen { position:absolute; inset:0; overflow-y:auto; overflow-x:hidden; padding:54px 16px 110px; background:var(--bg);
+          transition:transform var(--t) var(--spring), opacity var(--t) var(--spring); visibility:hidden; opacity:0;
+          scrollbar-width:none; }
+.screen::-webkit-scrollbar { display:none; }
+.screen.on { visibility:visible; opacity:1; transform:none; z-index:2; }
+.screen.from-start { transform:translateX(-30%); }   /* RTL: a pushed screen comes from the left */
+.screen.from-end { transform:translateX(30%); }
+.screen.lift { transform:scale(.94); }
+
+/* large title that shrinks on scroll */
+.nav { position:sticky; top:-54px; margin:-54px -16px 8px; padding:54px 16px 8px; z-index:5; background:transparent;
+       transition:background var(--t), backdrop-filter var(--t); }
+.nav.compact { background:var(--glass); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); border-bottom:.5px solid var(--line); }
+.nav .bar { display:flex; align-items:center; justify-content:space-between; min-height:36px; }
+.nav .small { font-size:17px; font-weight:600; opacity:0; transition:opacity var(--t); }
+.nav.compact .small { opacity:1; }
+.nav h1 { font-size:34px; font-weight:800; margin:2px 0 0; letter-spacing:-.4px; transition:font-size var(--t) var(--spring), opacity var(--t); }
+.nav.compact h1 { font-size:0; opacity:0; margin:0; }
+.nav .en { font-size:13px; color:var(--muted); margin-top:-2px; }
+.nav.compact .en { display:none; }
+.back { background:none; border:0; color:var(--green); font-size:17px; padding:6px 0; cursor:pointer; display:flex; align-items:center; gap:2px; }
+.link { background:none; border:0; color:var(--green); font-size:17px; cursor:pointer; padding:6px 0; }
+
+.card { background:var(--card); border-radius:22px; padding:16px; box-shadow:var(--shadow); margin:0 0 12px; }
+.muted { color:var(--muted); }
+.en-sub, .nav .en { unicode-bidi:plaintext; } .en-sub { font-size:12px; color:var(--muted); display:block; margin-top:1px; }
+.pill { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; background:var(--card); box-shadow:var(--shadow); font-size:15px; }
+.btn { border:0; border-radius:16px; padding:15px 16px; font-size:19px; font-weight:700; cursor:pointer; transition:transform .2s var(--spring), opacity .2s; }
+.btn:active { transform:scale(.96); }
+.btn.primary { background:var(--green); color:#fff; }
+.btn.ghost { background:var(--card); color:var(--red); box-shadow:inset 0 0 0 2px var(--red); }
+.btn.soft { background:var(--green-soft); color:var(--green-d); }
+.btn:disabled { opacity:.5; }
+.row { display:flex; justify-content:space-between; align-items:center; padding:11px 0; border-bottom:.5px solid var(--line); gap:10px; }
+.row:last-child { border-bottom:0; }
+
+/* ---------- 1. lock screen ---------- */
+#lock { padding:0; background:linear-gradient(160deg,#0b3d2a 0%,#0d5c3a 45%,#1a7d4f 75%,#7cc79a 120%); color:#fff; }
+#lock .clock { text-align:center; margin-top:110px; font-size:86px; font-weight:250; letter-spacing:-2px; direction:ltr; }
+#lock .date { text-align:center; font-size:20px; opacity:.85; }
+.banner { position:absolute; inset-inline:12px; top:300px; border-radius:24px; padding:14px 16px; color:var(--ink);
+          background:var(--glass); -webkit-backdrop-filter:blur(30px) saturate(1.6); backdrop-filter:blur(30px) saturate(1.6);
+          box-shadow:0 10px 30px rgba(0,0,0,.25); cursor:pointer; transform:translateY(-40px) scale(.96); opacity:0;
+          transition:transform 600ms var(--spring), opacity 600ms var(--spring); }
+.banner.show { transform:none; opacity:1; }
+.banner .head { display:flex; justify-content:space-between; font-size:14px; color:var(--muted); margin-bottom:4px; }
+.banner .app-ic { display:inline-flex; width:22px; height:22px; border-radius:6px; background:var(--green); color:#fff; font-size:13px;
+                  font-weight:800; align-items:center; justify-content:center; margin-inline-end:6px; vertical-align:middle; }
+.banner b { font-size:17px; } .banner p { margin:2px 0 0; font-size:16px; }
+#lock .hint { position:absolute; bottom:44px; inset-inline:0; text-align:center; font-size:14px; opacity:.75; }
+#lock .waiting { position:absolute; top:300px; inset-inline:0; text-align:center; opacity:.8; font-size:15px; }
+
+/* ---------- 2. Careem home ---------- */
+.home-top { display:flex; justify-content:space-between; align-items:center; margin:4px 0 12px; }
+.wordmark { font-weight:900; font-size:26px; color:var(--green); letter-spacing:-.5px; direction:ltr; }
+.search { display:flex; align-items:center; gap:8px; background:var(--card); border-radius:14px; padding:12px 14px; color:var(--muted); box-shadow:var(--shadow); margin-bottom:14px; }
+.jibli-card { background:linear-gradient(135deg,#00a651,#007a3d); color:#fff; border-radius:24px; padding:16px; margin-bottom:16px;
+              box-shadow:0 10px 30px rgba(0,166,81,.35); position:relative; overflow:hidden; }
+.jibli-card::after { content:""; position:absolute; inset-inline-start:-40px; top:-60px; width:180px; height:180px; border-radius:50%; background:rgba(255,255,255,.08); }
+.jibli-card h2 { margin:0; font-size:20px; } .jibli-card .sub { opacity:.85; font-size:14px; }
+.rings { display:flex; gap:12px; margin:14px 0 4px; }
+.ring { display:flex; flex-direction:column; align-items:center; gap:4px; width:72px; font-size:13px; text-align:center; }
+.ring svg { width:56px; height:56px; transform:rotate(-90deg); }
+.ring .trk { stroke:rgba(255,255,255,.25); } .ring .val { stroke:#fff; stroke-linecap:round; transition:stroke-dashoffset 1.2s var(--spring); }
+.jibli-card .mic-sm { position:absolute; inset-inline-end:14px; bottom:14px; width:54px; height:54px; border-radius:50%; border:0;
+                      background:#fff; color:var(--green); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 6px 16px rgba(0,0,0,.2); z-index:1; }
+.jibli-card .why-link { background:none; border:0; color:#fff; text-decoration:underline; font-size:14px; padding:0; cursor:pointer; opacity:.9; }
+.tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.tile { background:var(--card); border-radius:18px; padding:12px 6px; text-align:center; font-size:13px; box-shadow:var(--shadow); position:relative; border:0; cursor:pointer; }
+.tile .ic { font-size:28px; display:block; margin-bottom:4px; }
+.tile .soon { position:absolute; top:6px; inset-inline-start:6px; font-size:10px; background:var(--amber); color:#000; border-radius:6px; padding:1px 5px; }
+.section-t { font-size:20px; font-weight:800; margin:20px 0 10px; }
+.tabbar { position:absolute; bottom:0; inset-inline:0; height:84px; display:flex; justify-content:space-around; padding-top:8px; z-index:30;
+          background:var(--glass); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); border-top:.5px solid var(--line); }
+.tabbar button { background:none; border:0; font-size:11px; color:var(--muted); display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer; }
+.tabbar button.on { color:var(--green); } .tabbar .ti { font-size:22px; }
+
+/* ---------- 3. voice ---------- */
+#voice { font-size:20px; }
+.log { display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
+.msg { max-width:86%; padding:12px 16px; border-radius:22px; font-size:20px; line-height:1.5; animation:pop var(--t) var(--spring); }
+.msg.me { align-self:flex-start; background:var(--card); box-shadow:var(--shadow); border-end-start-radius:6px; }
+.msg.bot { align-self:flex-end; background:var(--green); color:#fff; border-end-end-radius:6px; }
+.msg.note { align-self:center; background:none; color:var(--muted); font-size:15px; padding:2px; }
+.msg.live { opacity:.6; font-style:italic; }
+@keyframes pop { from { opacity:0; transform:translateY(10px) scale(.97); } }
+.basket { animation:pop var(--t) var(--spring); }
+.basket h3 { margin:0 0 6px; font-size:20px; display:flex; justify-content:space-between; align-items:center; }
+.basket .row { font-size:20px; }
+.basket .total { display:flex; justify-content:space-between; font-size:24px; font-weight:800; padding-top:10px; }
+.basket .addr { font-size:16px; color:var(--muted); margin-top:6px; }
+.yn { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+.yn .btn { font-size:26px; padding:16px 8px; } .yn small { display:block; font-size:14px; font-weight:500; opacity:.85; }
+.mic-dock { position:absolute; bottom:0; inset-inline:0; padding:12px 16px 26px; display:flex; flex-direction:column; align-items:center; gap:6px; z-index:20;
+            background:linear-gradient(to top, var(--bg) 70%, transparent); }
+.status { font-size:19px; font-weight:700; color:var(--green-d); min-height:26px; text-align:center; }
+@media (prefers-color-scheme: dark) { .status { color:var(--green); } }
+.mic { width:96px; height:96px; border-radius:50%; border:0; background:var(--green); color:#fff; cursor:pointer; position:relative;
+       display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 10px var(--green-soft), 0 8px 20px rgba(0,0,0,.2);
+       transition:transform .25s var(--spring), background .25s; }
+.mic svg { width:42px; height:42px; } .mic:active { transform:scale(.94); }
+.mic.rec { background:var(--red); box-shadow:0 0 0 10px rgba(229,72,77,.18), 0 8px 20px rgba(0,0,0,.2); }
+.mic:disabled { opacity:.6; }
+canvas.wave { width:260px; height:44px; }
+.typed { display:flex; gap:8px; width:100%; }
+.typed input { flex:1; font:inherit; font-size:17px; padding:10px 14px; border-radius:14px; border:.5px solid var(--line); background:var(--card); color:var(--ink); }
+.typed button { border:0; border-radius:14px; background:var(--green); color:#fff; padding:0 14px; font-size:16px; cursor:pointer; }
+.dots { display:inline-flex; gap:4px; vertical-align:middle; } .dots i { width:7px; height:7px; border-radius:50%; background:currentColor; animation:blink 1.2s infinite; }
+.dots i:nth-child(2) { animation-delay:.2s; } .dots i:nth-child(3) { animation-delay:.4s; }
+@keyframes blink { 0%,80%,100% { opacity:.25; } 40% { opacity:1; } }
+
+/* ---------- 4. "Why this?" sheet ---------- */
+.scrim { position:absolute; inset:0; background:rgba(0,0,0,.35); opacity:0; visibility:hidden; transition:opacity var(--t); z-index:60; }
+.scrim.on { opacity:1; visibility:visible; }
+.sheet { position:absolute; inset-inline:0; bottom:0; height:88%; background:var(--bg); border-radius:28px 28px 0 0; z-index:61;
+         transform:translateY(102%); transition:transform 500ms var(--spring); overflow-y:auto; padding:8px 16px 40px; scrollbar-width:none; }
+.sheet.on { transform:none; }
+.grab { width:40px; height:5px; border-radius:3px; background:var(--line); margin:4px auto 10px; }
+.sheet h2 { font-size:28px; margin:0; } .step-t { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:800; color:var(--green); letter-spacing:.5px; text-transform:uppercase; margin-bottom:6px; }
+.step-t .n { width:22px; height:22px; border-radius:50%; background:var(--green); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:12px; }
+.timeline { position:relative; height:46px; margin:8px 4px 2px; }
+.timeline .axis { position:absolute; top:22px; inset-inline:0; height:2px; background:var(--line); }
+.timeline .dot { position:absolute; top:16px; width:14px; height:14px; border-radius:50%; background:var(--green); transform:translateX(50%); animation:grow .5s var(--spring); }
+.timeline .now { position:absolute; top:8px; height:30px; width:2px; background:var(--red); }
+.timeline .lbl { position:absolute; top:34px; font-size:10px; color:var(--muted); transform:translateX(50%); white-space:nowrap; }
+@keyframes grow { from { transform:translateX(50%) scale(0); } }
+.pred { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.pred .ring svg { width:70px; height:70px; } .pred .ring .trk { stroke:var(--line); } .pred .ring .val { stroke:var(--green); }
+.pred .ring.due .val { stroke:var(--amber); } .pred .ring { width:auto; }
+.pred .pct { font-size:17px; font-weight:800; margin-top:-48px; height:44px; }
+.bars { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+.bars .b { display:grid; grid-template-columns:70px 1fr 44px; gap:8px; align-items:center; font-size:14px; }
+.bars .t { height:10px; border-radius:6px; background:var(--line); overflow:hidden; }
+.bars .t i { display:block; height:100%; width:0; background:var(--muted); border-radius:6px; transition:width 1s var(--spring); }
+.bars .b.win .t i { background:var(--green); } .bars .b.win { font-weight:800; }
+.quote { font-size:19px; line-height:1.6; border-inline-start:4px solid var(--green); padding:4px 12px; margin:6px 0 0; }
+
+/* ---------- 5/6 lists ---------- */
+.group { background:var(--card); border-radius:14px; overflow:hidden; margin-bottom:8px; }
+.group .row { padding:13px 16px; font-size:18px; }
+.group-t { font-size:13px; color:var(--muted); margin:18px 16px 6px; }
+.group-f { font-size:13px; color:var(--muted); margin:6px 16px 0; }
+.x { border:0; background:var(--line); color:var(--muted); width:28px; height:28px; border-radius:50%; cursor:pointer; flex:none; font-size:16px; }
+.check { color:var(--green); font-size:20px; font-weight:800; visibility:hidden; } .opt.sel .check { visibility:visible; }
+.opt { cursor:pointer; } .opt:active { background:var(--line); }
+.danger { color:var(--red); text-align:center; justify-content:center !important; cursor:pointer; }
+
+/* ---------- 7. family phone ---------- */
+#family { background:linear-gradient(170deg,#1f2937,#111827 60%,#0b1020); color:#fff; }
+#family .who { text-align:center; font-size:14px; opacity:.7; margin-top:6px; }
+#family .clock { text-align:center; font-size:64px; font-weight:250; direction:ltr; margin-top:20px; }
+.push { color:var(--ink); background:var(--card); border-radius:24px; padding:16px; margin-top:28px; box-shadow:0 12px 30px rgba(0,0,0,.4);
+        animation:drop 650ms var(--spring); }
+@keyframes drop { from { opacity:0; transform:translateY(-60px) scale(.95); } }
+.push .head { display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:6px; }
+
+/* ---------- 8. confirmed + tracking ---------- */
+.done-check { display:flex; flex-direction:column; align-items:center; margin:30px 0 10px; }
+.done-check svg { width:120px; height:120px; } .done-check circle { fill:var(--green); transform-origin:center; animation:grow2 .5s var(--spring); }
+.done-check path { fill:none; stroke:#fff; stroke-width:8; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:70; stroke-dashoffset:70; animation:draw .5s .35s var(--spring) forwards; }
+@keyframes grow2 { from { transform:scale(0); } } @keyframes draw { to { stroke-dashoffset:0; } }
+.map { height:180px; border-radius:22px; overflow:hidden; position:relative; background:#e8efe9; box-shadow:var(--shadow); margin-bottom:12px; }
+@media (prefers-color-scheme: dark) { .map { background:#1a231d; } }
+.map svg { position:absolute; inset:0; width:100%; height:100%; }
+.map .cap { position:absolute; width:34px; height:34px; border-radius:50%; background:var(--green); border:3px solid #fff; box-shadow:0 4px 10px rgba(0,0,0,.3);
+            display:flex; align-items:center; justify-content:center; font-size:16px; transition:left 1.2s var(--spring), top 1.2s var(--spring); }
+.eta { display:flex; justify-content:space-between; align-items:baseline; }
+.eta .big { font-size:40px; font-weight:800; direction:ltr; }
+.steps { list-style:none; padding:0; margin:8px 0 0; }
+.steps li { display:flex; gap:12px; align-items:center; padding:9px 0; font-size:18px; color:var(--muted); transition:color .4s; }
+.steps li .b { width:26px; height:26px; border-radius:50%; border:2px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:14px; transition:all .4s var(--spring); flex:none; }
+.steps li.on { color:var(--ink); font-weight:700; } .steps li.on .b { background:var(--green); border-color:var(--green); color:#fff; }
+.foot { font-size:12px; color:var(--muted); text-align:center; margin-top:8px; }
+
+/* ---------- 9. learned ---------- */
+.learned-hero { text-align:center; margin:24px 0 12px; font-size:60px; animation:pop .6s var(--spring); }
+.thumbs { display:flex; gap:12px; justify-content:center; margin-top:12px; }
+.thumbs button { width:72px; height:72px; border-radius:50%; border:0; background:var(--card); box-shadow:var(--shadow); font-size:32px; cursor:pointer; transition:transform .2s var(--spring); }
+.thumbs button:active { transform:scale(.9); } .thumbs button.sel { background:var(--green-soft); box-shadow:0 0 0 3px var(--green); }
+
+/* ---------- flying element (shared-element transitions) ---------- */
+.fly { position:absolute; z-index:70; border-radius:24px; pointer-events:none; transition:all 520ms var(--spring); }
+
+/* ---------- demo bar (hidden: press D, or tap the clock 3 times) ---------- */
+.demo { position:fixed; top:10px; left:50%; transform:translateX(-50%) translateY(-140%); z-index:100; display:flex; flex-wrap:wrap; gap:6px; max-width:96vw;
+        background:rgba(17,17,17,.88); color:#fff; padding:8px; border-radius:14px; transition:transform .4s var(--spring); font-size:13px; direction:rtl; }
+.demo.on { transform:translateX(-50%); }
+.demo button { background:#2c2c2e; color:#fff; border:0; border-radius:8px; padding:6px 9px; cursor:pointer; font-size:13px; }
+.demo button:hover { background:var(--green); }
+.toast { position:absolute; bottom:120px; left:50%; transform:translate(-50%,20px); background:rgba(0,0,0,.82); color:#fff; padding:10px 16px; border-radius:14px; font-size:15px;
+         opacity:0; transition:all .35s var(--spring); z-index:90; pointer-events:none; max-width:80%; text-align:center; }
+.toast.on { opacity:1; transform:translate(-50%,0); }
+.err { color:var(--red); }
+</style>
+</head>
+<body>
+<div class="demo" id="demo" aria-label="demo bar">
+  <b style="align-self:center;padding:0 4px">Demo</b>
+  <button data-go="lock">١ إشعار</button><button data-go="home">٢ كريم</button><button data-go="voice">٣ جيبلي</button>
+  <button data-go="why">٤ ليش؟</button><button data-go="memory">٥ ذاكرتي</button><button data-go="settings">٦ الإعدادات</button>
+  <button data-go="family">٧ تلفون خالد</button><button data-go="track">٨ التتبع</button><button data-go="learned">٩ تعلّم</button>
+  <button id="d-remind">↻ تذكير جديد</button><button id="d-close">✕</button>
+</div>
+
+<div class="device" id="device">
+  <div class="island"></div>
+  <div class="statusbar" id="sb"><span id="sb-time">9:41</span><span class="icons">●●●● <svg width="25" height="12" viewBox="0 0 25 12"><rect x=".5" y=".5" width="21" height="11" rx="3" fill="none" stroke="currentColor" opacity=".5"/><rect x="2" y="2" width="16" height="8" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="1.5" height="4" rx=".7" fill="currentColor" opacity=".5"/></svg></span></div>
+
+  <!-- 1. lock screen -->
+  <section class="screen" id="lock">
+    <div class="clock" id="lock-clock">9:41</div>
+    <div class="date" id="lock-date"></div>
+    <div class="waiting" id="lock-wait">جيبلي عم يحضّر تذكير… <span class="dots"><i></i><i></i><i></i></span></div>
+    <div class="banner" id="banner" role="button" tabindex="0">
+      <div class="head"><span><span class="app-ic">ج</span>جيبلي · Careem</span><span>هلق</span></div>
+      <b id="banner-title">قرّب يخلص عندك</b>
+      <p id="banner-text"></p>
+    </div>
+    <div class="hint">اضغطي على الإشعار · Tap the notification</div>
+  </section>
+
+  <!-- 2. Careem home -->
+  <section class="screen" id="home">
+    <div class="home-top">
+      <span class="wordmark">careem</span>
+      <span class="pill">📍 <span>البيت</span> ▾</span>
+    </div>
+    <div style="font-size:28px;font-weight:800;margin-bottom:10px" id="home-hello">أهلين</div>
+    <div class="search">🔍 <span>شو بدك اليوم؟</span></div>
+    <div class="jibli-card" id="jibli-card">
+      <h2>🎙️ جيبلي · قرّب يخلص عندك</h2>
+      <div class="sub">بنتعلّم عاداتك وبنذكّرك قبل ما يخلص الإشي <span class="en-sub" style="color:#fff;opacity:.8">Jibli learns your habits</span></div>
+      <div class="rings" id="home-rings"></div>
+      <button class="why-link" id="home-why">ليش؟ · Why this?</button>
+      <button class="mic-sm" id="home-mic" aria-label="احكي مع جيبلي"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/></svg></button>
+    </div>
+    <div class="tiles">
+      <button class="tile"><span class="ic">🍔</span>أكل<span class="en-sub">Food</span></button>
+      <button class="tile" id="tile-quik"><span class="ic">🛒</span>كويك<span class="en-sub">Quik</span></button>
+      <button class="tile"><span class="soon">قريباً</span><span class="ic">🚗</span>مشاوير<span class="en-sub">Rides</span></button>
+      <button class="tile"><span class="ic">💳</span>باي<span class="en-sub">Pay</span></button>
+      <button class="tile"><span class="ic">📦</span>بوكس<span class="en-sub">Box</span></button>
+      <button class="tile" data-go="memory"><span class="ic">🧠</span>ذاكرتي<span class="en-sub">My memory</span></button>
+      <button class="tile" data-go="settings"><span class="ic">⚙️</span>مين بيأكّد<span class="en-sub">Who confirms</span></button>
+      <button class="tile" data-go="lock"><span class="ic">🔔</span>إشعار<span class="en-sub">Reminder</span></button>
+    </div>
+    <div class="section-t">آخر طلباتك <span class="en-sub">Recent orders</span></div>
+    <div id="home-orders"></div>
+  </section>
+
+  <!-- 3. Jibli voice -->
+  <section class="screen" id="voice">
+    <div class="nav"><div class="bar"><button class="back" data-back>‹ كريم</button><span class="small">جيبلي</span><button class="link" data-go="settings">⚙️</button></div>
+      <h1 id="voice-hello">هلا 👋</h1><div class="en">Jibli · voice ordering</div></div>
+    <div class="log" id="log" aria-live="polite"></div>
+    <div id="basket"></div>
+    <div style="height:210px"></div>
+  </section>
+
+  <!-- 5. memory -->
+  <section class="screen" id="memory">
+    <div class="nav"><div class="bar"><button class="back" data-back>‹ رجوع</button><span class="small">شو بيعرف جيبلي عني</span><span></span></div>
+      <h1>شو بيعرف عني</h1><div class="en">What Jibli knows about me</div></div>
+    <div class="group" id="mem-list"></div>
+    <div class="group"><div class="row danger" id="mem-all">انسى كل إشي · Forget everything</div></div>
+    <div class="group-f">🔒 الصوت ما بنحفظه أبداً. بنتذكّر بس اللي بتسمحيلنا فيه.<br>Audio is not stored. Only what you allow.</div>
+  </section>
+
+  <!-- 6. settings -->
+  <section class="screen" id="settings">
+    <div class="nav"><div class="bar"><button class="back" data-back>‹ رجوع</button><span class="small">الإعدادات</span><span></span></div>
+      <h1>مين بيأكّد طلباتي؟</h1><div class="en">Who confirms my orders?</div></div>
+    <div class="group" id="modes"></div>
+    <div class="group-f" id="mode-foot"></div>
+    <div class="group-t">حدود الأمان · Safety limits (read-only)</div>
+    <div class="group" id="limits"></div>
+  </section>
+
+  <!-- 7. family phone (Khaled) -->
+  <section class="screen" id="family">
+    <div class="who" id="fam-who">📱 تلفون خالد · Khaled's phone</div>
+    <div class="clock" id="fam-clock">9:41</div>
+    <div id="fam-card"></div>
+    <div style="text-align:center;margin-top:18px"><button class="link" style="color:#9ae6b4" data-go="voice">‹ رجوع لتلفون أم خالد</button></div>
+  </section>
+
+  <!-- 8. confirmed + tracking -->
+  <section class="screen" id="track">
+    <div class="done-check" id="done-check"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="56"/><path d="M36 62 L53 78 L86 44"/></svg>
+      <div style="font-size:26px;font-weight:800;margin-top:10px">انطلب! 🎉</div><div class="muted" id="track-by"></div></div>
+    <div class="map" id="map"><svg viewBox="0 0 358 180" preserveAspectRatio="none">
+      <path d="M0 140 L358 120" stroke="#cdd9cf" stroke-width="14"/><path d="M90 0 L120 180" stroke="#cdd9cf" stroke-width="12"/>
+      <path d="M260 0 L240 180" stroke="#cdd9cf" stroke-width="10"/><path d="M0 50 L358 70" stroke="#d8e2da" stroke-width="8"/>
+      <path id="route" d="M300 40 L250 66 L240 124 L120 136 L70 150" stroke="#00a651" stroke-width="5" fill="none" stroke-dasharray="8 7"/>
+      <text x="300" y="30" font-size="12" text-anchor="middle" fill="#555">🏪 كويك</text><text x="62" y="172" font-size="12" text-anchor="middle" fill="#555">🏠 البيت</text></svg>
+      <div class="cap" id="cap">🛵</div></div>
+    <div class="card"><div class="eta"><span>بيوصل خلال<span class="en-sub">Arriving in</span></span><span class="big" id="eta">20:00</span></div>
+      <ul class="steps" id="steps">
+        <li><span class="b">١</span>عم يجهّزوا طلبك<span class="en-sub">Preparing</span></li>
+        <li><span class="b">٢</span>الكابتن استلم الطلب<span class="en-sub">Captain picked up</span></li>
+        <li><span class="b">٣</span>بالطريق لعندك<span class="en-sub">On the way</span></li>
+        <li><span class="b">٤</span>وصل!<span class="en-sub">Delivered</span></li></ul></div>
+    <div class="foot">التتبع هون محاكاة للعرض<span class="en-sub">Tracking is a demo simulation (about 20 seconds)</span></div>
+  </section>
+
+  <!-- 9. Jibli learned -->
+  <section class="screen" id="learned">
+    <div class="learned-hero">🧠</div>
+    <div style="text-align:center;font-size:26px;font-weight:800">جيبلي تعلّم</div><div class="en-sub" style="text-align:center">Jibli learned</div>
+    <div class="card" style="margin-top:16px;font-size:20px;line-height:1.6" id="learned-text"></div>
+    <div class="card"><div style="font-size:18px;text-align:center">كان التذكير بوقته؟ <span class="en-sub">Was this reminder helpful? (bandit reward)</span></div>
+      <div class="thumbs"><button id="th-up" aria-label="yes">👍</button><button id="th-down" aria-label="no">👎</button></div>
+      <div class="foot" id="th-res"></div></div>
+    <button class="btn primary" style="width:100%" data-go="home">رجوع لكريم · Back home</button>
+  </section>
+
+  <!-- tab bar (home) -->
+  <div class="tabbar" id="tabbar"><button class="on" data-go="home"><span class="ti">🏠</span>الرئيسية</button><button data-go="voice"><span class="ti">🎙️</span>جيبلي</button>
+    <button data-go="memory"><span class="ti">🧠</span>ذاكرتي</button><button data-go="settings"><span class="ti">⚙️</span>الإعدادات</button></div>
+
+  <!-- 4. Why this? sheet -->
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" id="why" role="dialog" aria-label="Why this?">
+    <div class="grab"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center"><h2>ليش هيك؟</h2><button class="link" id="why-close">تم</button></div>
+    <div class="en-sub" style="margin-bottom:12px">Why this? · the live personalization layer</div>
+    <div class="card"><div class="step-t"><span class="n">١</span>بيتعلّم · LEARN</div><div id="w-learn"></div></div>
+    <div class="card"><div class="step-t"><span class="n">٢</span>بيتوقّع · PREDICT</div><div class="pred" id="w-pred"></div>
+      <div class="en-sub" style="margin-top:6px">الأيام من آخر مرة ÷ معدّل المدة · ٩٠٪ أو أكثر = قرّب يخلص · days since ÷ usual gap, ≥ 90% = running out</div></div>
+    <div class="card"><div class="step-t"><span class="n">٣</span>بيقرّر · DECIDE</div><div id="w-decide"></div></div>
+    <div class="card"><div class="step-t"><span class="n">٤</span>بيحكي · SPEAK</div><div id="w-speak"></div></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+const USER = decodeURIComponent(location.pathname.split("/").filter(Boolean).pop());
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const AR = new Intl.NumberFormat("ar", {numberingSystem:"arab", maximumFractionDigits:2});
+const fmt = n => AR.format(n).replace(/[\u061C\u200E\u200F]/g, "");  // drop bidi marks (some fonts draw them as dashes)
+const ar = n => n == null ? "—" : fmt(n);
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const money = (v, cur) => v == null ? "" : `${ar(Number(v))} ${cur === "AED" ? "درهم" : cur === "JOD" ? "دينار" : (cur || "دينار")}`;
+const post = (url, body) => fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+const getJ = async url => { const r = await fetch(url); const j = await r.json(); if (!r.ok) throw new Error(j.detail || j.error || r.statusText); return j; };
+const STYLE_AR = {gentle:"لطيف وحنون", practical:"عملي ومختصر", family:"بذكر العيلة", short:"قصير جداً"};
+let S = null, WHY = null, VIEW = null, SETTINGS = null, current = null, stack = [];
+
+function toast(t) { const el = $("toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("on"), 2600); }
+
+// ---------------- data
+async function loadState() { S = await getJ(`/api/state/${encodeURIComponent(USER)}`); return S; }
+async function loadWhy() { WHY = await getJ(`/api/why/${encodeURIComponent(USER)}`); return WHY; }
+async function loadView() { VIEW = await getJ(`/api/family-view/${encodeURIComponent(USER)}`); return VIEW; }
+async function loadSettings() { SETTINGS = await getJ(`/api/settings/${encodeURIComponent(USER)}`); return SETTINGS; }
+const nm = n => (VIEW && VIEW.names && VIEW.names[n]) || n || "";
+
+// ---------------- navigation (spring push, RTL)
+const LIGHT_BAR = new Set(["lock", "family"]);
+function go(id, opts = {}) {
+  if (id === "why") return openWhy();
+  const next = $(id); if (!next || id === current) return;
+  closeWhy();
+  const prev = current && $(current);
+  if (!opts.back && current) stack.push(current);
+  next.classList.remove("from-start", "from-end", "lift");
+  if (!opts.instant) { next.classList.add(opts.back ? "from-end" : "from-start"); void next.offsetWidth; }
+  next.classList.add("on"); next.classList.remove("from-start", "from-end");
+  if (prev) { prev.classList.remove("on"); prev.classList.add(opts.back ? "from-start" : "lift"); setTimeout(() => prev.classList.remove("lift", "from-start"), 500); }
+  current = id; next.scrollTop = 0;
+  $("sb").classList.toggle("light", LIGHT_BAR.has(id));
+  $("tabbar").style.display = ["home", "memory", "settings"].includes(id) ? "" : "none";
+  document.querySelectorAll("#tabbar button").forEach(b => b.classList.toggle("on", b.dataset.go === id));
+  history.replaceState(null, "", `#${id}`);
+  (ENTER[id] || (() => {}))();
+}
+function back() { const p = stack.pop(); go(p || "home", {back:true}); }
+document.addEventListener("click", e => {
+  const g = e.target.closest("[data-go]"); if (g) { e.preventDefault(); go(g.dataset.go); }
+  if (e.target.closest("[data-back]")) back();
+});
+// large titles shrink on scroll
+document.querySelectorAll(".screen").forEach(sc => sc.addEventListener("scroll", () => {
+  const n = sc.querySelector(".nav"); if (n) n.classList.toggle("compact", sc.scrollTop > 30);
+}, {passive:true}));
+
+// shared element: a card flies from one element's box to another box (FLIP)
+function fly(fromEl, toRect, color) {
+  if (!fromEl || matchMedia("(prefers-reduced-motion: reduce)").matches) return Promise.resolve();
+  const dev = $("device").getBoundingClientRect(), r = fromEl.getBoundingClientRect();
+  const f = document.createElement("div"); f.className = "fly";
+  Object.assign(f.style, {left:`${r.left - dev.left}px`, top:`${r.top - dev.top}px`, width:`${r.width}px`, height:`${r.height}px`,
+                          background:color || getComputedStyle(fromEl).backgroundColor || "var(--card)"});
+  $("device").appendChild(f); void f.offsetWidth;
+  Object.assign(f.style, {left:`${toRect.left}px`, top:`${toRect.top}px`, width:`${toRect.width}px`, height:`${toRect.height}px`,
+                          borderRadius:toRect.radius || "24px", opacity: toRect.fade ? 0 : 1});
+  return new Promise(res => setTimeout(() => { f.style.opacity = 0; setTimeout(() => f.remove(), 250); res(); }, 520));
+}
+const FULL = () => { const d = $("device").getBoundingClientRect(); return {left:0, top:0, width:d.width, height:d.height, radius:"0px"}; };
+
+// ---------------- clocks
+function tick() {
+  const n = new Date(), t = n.toLocaleTimeString("en-GB", {hour:"numeric", minute:"2-digit"});
+  $("sb-time").textContent = t; $("lock-clock").textContent = t; $("fam-clock").textContent = t;
+  $("lock-date").textContent = n.toLocaleDateString("ar-JO", {weekday:"long", day:"numeric", month:"long"});
+}
+tick(); setInterval(tick, 10000);
+
+// ---------------- voice (same logic as /voice: browser STT or server STT, Leva/browser TTS, live progress)
+let lastReply = null, busy = false;
+function play(r) {
+  lastReply = r; if (!r || !r.reply) return;
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  speaking(true);
+  const done = () => speaking(false);
+  if (r.audio_b64) { const a = new Audio(`data:${r.audio_mime};base64,${r.audio_b64}`); a.onended = done; a.play().catch(() => browserSay(r.reply)); }
+  else browserSay(r.reply);
+}
+function bestArabicVoice() {
+  const all = speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith("ar"));
+  const score = v => (v.lang.toLowerCase() === "ar-jo" ? 40 : 0) + (/natural|online|neural/i.test(v.name) ? 20 : 0)
+                     + (["ar-sy","ar-lb","ar-ps"].includes(v.lang.toLowerCase()) ? 10 : 0);
+  return all.sort((a, b) => score(b) - score(a))[0];
+}
+function browserSay(text) {
+  if (!("speechSynthesis" in window) || !text) return speaking(false);
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text); u.rate = .95;
+  const v = bestArabicVoice(); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = "ar-JO";
+  u.onend = () => speaking(false); speechSynthesis.speak(u);
+}
+async function speakLine(text) {
+  try { const r = await (await post("/api/speak", {user_id:USER, text})).json(); play({reply:text, audio_b64:r.audio_b64, audio_mime:r.audio_mime}); }
+  catch (e) { browserSay(text); }
+}
+function add(cls, text) { const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = text; $("log").appendChild(d);
+  $("voice").scrollTo({top:1e6, behavior:"smooth"}); return d; }
+
+// mic dock (lives in the device so it stays put while the log scrolls)
+const dock = document.createElement("div"); dock.className = "mic-dock"; dock.id = "dock"; dock.style.display = "none";
+dock.innerHTML = `<canvas class="wave" id="wave" width="520" height="88"></canvas><div class="status" id="status">اضغطي واحكي</div>
+  <button class="mic" id="mic" aria-label="اضغطي واحكي"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/></svg></button>
+  <form class="typed" id="typed"><input id="text" placeholder="أو اكتبي: ابعتلي خبز وحليب" autocomplete="off"><button>إرسال</button></form>`;
+$("device").appendChild(dock);
+function setBusy(b, label) { busy = b; $("mic").disabled = b; $("status").textContent = label || "اضغطي واحكي"; }
+
+// waveform: the real microphone level when we have the stream, a calm synthetic wave while Jibli talks or thinks
+let analyser = null, level = 0, waveMode = "idle";
+function speaking(on) { waveMode = on ? "speak" : (waveMode === "speak" ? "idle" : waveMode); }
+(function drawWave() {
+  const c = $("wave"), x = c.getContext("2d"), w = c.width, h = c.height, n = 36, t = performance.now() / 1000;
+  x.clearRect(0, 0, w, h);
+  let data = null;
+  if (analyser && waveMode === "listen") { data = new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(data); }
+  const green = getComputedStyle(document.documentElement).getPropertyValue("--green").trim() || "#00a651";
+  x.fillStyle = waveMode === "listen" ? "#e5484d" : green;
+  for (let i = 0; i < n; i++) {
+    let a;
+    if (data) a = data[Math.floor(i * data.length / n / 2)] / 255;
+    else if (waveMode === "listen") a = .25 + .35 * Math.abs(Math.sin(t * 6 + i * .7)) * (.6 + .4 * Math.random());
+    else if (waveMode === "speak") a = .2 + .5 * Math.abs(Math.sin(t * 4 + i * .45)) * Math.abs(Math.cos(t * 1.3 + i * .2));
+    else if (waveMode === "think") a = .12 + .12 * Math.abs(Math.sin(t * 2 + i * .3));
+    else a = .06;
+    const bh = Math.max(4, a * h), bw = w / n * .55;
+    x.beginPath(); x.roundRect ? x.roundRect(i * w / n + 2, (h - bh) / 2, bw, bh, bw / 2) : x.rect(i * w / n + 2, (h - bh) / 2, bw, bh); x.fill();
+  }
+  requestAnimationFrame(drawWave);
+})();
+async function meter() {  // mic level for the waveform only; never recorded or sent
+  try { const st = await navigator.mediaDevices.getUserMedia({audio:true}); const ctx = new AudioContext();
+        analyser = ctx.createAnalyser(); analyser.fftSize = 128; ctx.createMediaStreamSource(st).connect(analyser);
+        return () => { st.getTracks().forEach(t => t.stop()); ctx.close(); analyser = null; }; }
+  catch (e) { return () => {}; }
+}
+
+let progressTimer = null, lastN = -1;
+function startThinking() {
+  waveMode = "think"; lastN = -1;
+  progressTimer = setInterval(async () => {
+    try { const p = await (await fetch(`/api/progress/${encodeURIComponent(USER)}`)).json();
+          if (p.n !== lastN) { lastN = p.n; $("status").textContent = p.text; } } catch (e) {}
+  }, 500);
+}
+function stopThinking() { clearInterval(progressTimer); progressTimer = null; if (waveMode === "think") waveMode = "idle"; }
+
+async function handle(promise, shown) {
+  setBusy(true, "لحظة…"); startThinking();
+  const wasWaiting = VIEW && VIEW.waiting;
+  try {
+    const res = await promise, r = await res.json();
+    if (res.status === 503) throw new Error("الصوت مش شغّال هلق، اكتبي طلبك تحت.");
+    if (res.status === 422) throw new Error("ما سمعت شي، جرّبي كمان مرة.");
+    if (!res.ok) throw new Error(r.detail || r.error || res.statusText);
+    stopThinking();
+    if (r.transcript && !shown) add("me", r.transcript);
+    add("bot", r.reply); play(r);
+    if (r.waiting) { VIEW = r.waiting; renderBasket(); }
+    if (wasWaiting && VIEW && !VIEW.waiting && VIEW.last && VIEW.last.kind === "careem_order") setTimeout(() => ordered(VIEW.last.by), 900);
+  } catch (e) { add("note err", "⚠️ " + e.message); }
+  finally { stopThinking(); setBusy(false); }
+}
+function say(text) { add("me", text); return handle(post("/api/say", {user_id:USER, text}), true); }
+
+let sttMode = "server", recog = null, rec = null, chunks = [], stopMeter = () => {};
+fetch("/api/voice-config").then(r => r.json()).then(c => { sttMode = c.stt; }).catch(() => {});
+const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+async function browserListen() {
+  if (!Recognition) { add("note err", "⚠️ هالمتصفح ما بيدعم الصوت. افتحي بـ Edge أو Chrome، أو اكتبي تحت."); return; }
+  if (recog) { recog.stop(); return; }
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  recog = new Recognition(); recog.lang = "ar-JO"; recog.interimResults = true; recog.continuous = false;
+  let finalText = "", live = null;
+  recog.onresult = e => {
+    const text = Array.from(e.results).map(r => r[0].transcript).join(" ");
+    if (!live) live = add("me live", ""); live.textContent = text;   // live transcript
+    if (e.results[e.results.length - 1].isFinal) finalText = text;
+  };
+  recog.onerror = e => { if (e.error !== "no-speech" && e.error !== "aborted") add("note err", "⚠️ المايك: " + e.error); };
+  recog.onend = () => { recog = null; $("mic").classList.remove("rec"); waveMode = "idle"; stopMeter();
+    if (live) live.remove(); if (finalText.trim()) say(finalText.trim()); else setBusy(false); };
+  stopMeter = await meter(); recog.start(); waveMode = "listen"; $("mic").classList.add("rec"); $("status").textContent = "عم بسمعك… احكي";
+}
+$("mic").onclick = async () => {
+  if (busy) return;
+  if (sttMode === "browser") return browserListen();
+  if (rec && rec.state === "recording") { rec.stop(); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    const ctx = new AudioContext(); analyser = ctx.createAnalyser(); analyser.fftSize = 128; ctx.createMediaStreamSource(stream).connect(analyser);
+    rec = new MediaRecorder(stream); chunks = [];
+    rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+    rec.onstop = () => { stream.getTracks().forEach(t => t.stop()); ctx.close(); analyser = null; waveMode = "idle"; $("mic").classList.remove("rec");
+      const blob = new Blob(chunks, {type: rec.mimeType || "audio/webm"});
+      handle(fetch(`/api/voice?user_id=${encodeURIComponent(USER)}`, {method:"POST", headers:{"Content-Type":blob.type || "audio/webm"}, body:blob})); };
+    rec.start(); waveMode = "listen"; $("mic").classList.add("rec"); $("status").textContent = "عم بسمعك… اضغطي لما تخلصي";
+  } catch (e) { add("note err", "⚠️ ما قدرت أفتح المايك: " + e.message); }
+};
+$("typed").onsubmit = e => { e.preventDefault(); const t = $("text").value.trim(); if (!t || busy) return; $("text").value = ""; say(t); };
+
+// ---------------- 3. basket card (items, Careem price, address, نعم / لا, "Why this?")
+function renderBasket() {
+  const v = VIEW, box = $("basket"); if (!v) return;
+  if (!v.waiting) { if (!box.querySelector(".done")) box.innerHTML = ""; return; }
+  const items = (v.items || []).map(i => `<div class="row"><span>${esc(i.name)} <b>× ${ar(i.qty)}</b></span><span>${i.price != null ? esc(money(i.price, v.currency)) : ""}</span></div>`).join("")
+                || (v.summary ? `<div class="row">${esc(v.summary)}</div>` : "");
+  const addr = v.address || (v.summary && /عنوان|البيت|address|Home/i.test(v.summary) ? v.summary : "عنوانك المحفوظ · البيت");
+  const mine = v.asked_user && (!SETTINGS || SETTINGS.confirm_mode !== "family");
+  box.innerHTML = `<div class="card basket" id="basket-card"><h3><span>🛒 طلبك من كويك</span><button class="link" style="font-size:15px" data-go="why">ليش؟ · Why?</button></h3>${items}
+    <div class="total"><span>المجموع مع التوصيل</span><span>${esc(money(v.total, v.currency))}</span></div>
+    <div class="addr">📍 ${esc(addr)}</div>
+    ${mine ? `<div class="yn"><button class="btn primary" id="yes">نعم<small>اطلب هلق · Yes</small></button><button class="btn ghost" id="no">لا<small>بدي أغيّر · No</small></button></div>
+      ${v.confirmer && (!SETTINGS || SETTINGS.confirm_mode === "either") ? `<div class="en-sub" style="text-align:center;margin-top:8px">أو ${esc(nm(v.confirmer))} بيقدر يوافق من تلفونه، مين ما سبق</div>` : ""}`
+           : `<div class="row" style="justify-content:center">⏳ بنستنى ${esc(nm(v.asked))} يوافق</div><button class="btn soft" style="width:100%" data-go="family">📱 شوف تلفون ${esc(nm(v.asked))}</button>`}</div>`;
+  if ($("yes")) { $("yes").onclick = () => !busy && say("اه"); $("no").onclick = () => !busy && say("لا"); }
+}
+// the family may approve from their phone at any moment
+let famTimer = null;
+async function pollView() {
+  if (busy) return;
+  const was = VIEW && VIEW.waiting;
+  try { await loadView(); } catch (e) { return; }
+  if (current === "voice") renderBasket();
+  if (current === "family") renderFamily();
+  if (was && !VIEW.waiting && VIEW.last && ["voice", "family"].includes(current)) {
+    if (VIEW.last.kind === "confirmation_declined") { add("bot", "ما انطلب شي. بدك نغيّر إشي؟"); speakLine("ما انطلب شي. بدك نغيّر إشي؟"); }
+    else if (current === "voice") ordered(VIEW.last.by || VIEW.last.confirmed_by);
+  }
+}
+
+// ---------------- 2. home: Jibli card with live due rings
+function ringSvg(frac, cls = "") {
+  const r = 24, c = 2 * Math.PI * r, f = Math.max(0, Math.min(1, frac));
+  return `<svg viewBox="0 0 56 56" class="${cls}"><circle class="trk" cx="28" cy="28" r="${r}" fill="none" stroke-width="6"/>
+    <circle class="val" cx="28" cy="28" r="${r}" fill="none" stroke-width="6" stroke-dasharray="${c}" stroke-dashoffset="${c}" data-off="${c * (1 - f)}"/></svg>`;
+}
+function fillRings(root) { requestAnimationFrame(() => requestAnimationFrame(() => root.querySelectorAll("circle.val").forEach(c => c.style.strokeDashoffset = c.dataset.off))); }
+function rollNumbers(root) {  // counters roll up to their value
+  root.querySelectorAll("[data-roll]").forEach(el => { const to = Number(el.dataset.roll), dec = Number(el.dataset.dec || 0), t0 = performance.now();
+    const step = t => { const k = REDUCED ? 1 : Math.min(1, (t - t0) / 900), e = 1 - Math.pow(1 - k, 3); el.textContent = fmt(Number((to * e).toFixed(dec))) + (el.dataset.suf || "");
+                        if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step); });
+}
+const shortName = p => (p.name_ar || p.name_en || "").replace(/\s*[١٢٣٤٥٦٧٨٩٠\d].*$/, "").split(" ").slice(0, 2).join(" ");
+async function enterHome() {
+  try { await loadState(); } catch (e) { toast("⚠️ " + e.message); return; }
+  $("home-hello").textContent = `مساء الخير يا ${S.user.name_ar}`;
+  const due = (S.advice.running_out || []).slice(0, 3), list = due.length ? due : (S.predictions || []).slice(0, 3);
+  $("home-rings").innerHTML = list.map(p => `<div class="ring">${ringSvg(p.days_since / p.median_gap_days)}<span>${esc(shortName(p))}</span></div>`).join("")
+                              || `<span class="sub">ما في إشي قرّب يخلص هلق 👌</span>`;
+  fillRings($("home-rings"));
+  $("jibli-card").querySelector("h2").textContent = due.length ? "🎙️ جيبلي · قرّب يخلص عندك" : "🎙️ جيبلي";
+  const ords = (S.orders || []).slice(0, 2);
+  $("home-orders").innerHTML = ords.map(o => `<div class="card row" style="margin-bottom:8px"><span>🛒 ${esc(o.items.map(i => i.item_id).length)} أغراض · ${esc(String(o.ts).slice(0, 10))}</span><b>${esc(money(o.total, "JOD"))}</b></div>`).join("");
+}
+$("home-mic").onclick = () => go("voice"); $("tile-quik").onclick = () => go("voice"); $("home-why").onclick = () => openWhy();
+
+// ---------------- 1. lock screen: the real reminder (POST /api/reminder), banner expands into Jibli
+let reminderText = null, reminderLoading = false;
+async function enterLock() {
+  $("banner").classList.remove("show"); $("lock-wait").style.display = "";
+  if (reminderText) return showBanner();
+  if (reminderLoading) return; reminderLoading = true;
+  try {
+    const r = await (await post("/api/reminder", {user_id:USER})).json();
+    if (r.reply) reminderText = r.reply;
+    else {  // blocked (already reminded today / quiet hours): show the last sentence Jibli said, or the live due items
+      const w = await loadWhy().catch(() => null);
+      const items = ((S || await loadState()).advice.running_out || []).map(shortName);
+      reminderText = (w && w.spoken && w.spoken.text) || (items.length ? `${items.join("، ")} قرّب يخلص، نطلب زي كل مرة؟` : "شو بدك نجيبلك اليوم؟");
+      if (r.blocked) console.log("[reminder] blocked:", r.blocked);
+    }
+  } catch (e) { reminderText = "شو بدك نجيبلك اليوم؟"; }
+  reminderLoading = false; showBanner();
+}
+function showBanner() {
+  $("lock-wait").style.display = "none";
+  const items = ((S && S.advice.running_out) || []).map(shortName);
+  $("banner-title").textContent = items.length ? `${items[0]} قرّب يخلص` : "جيبلي";
+  $("banner-text").textContent = reminderText; $("banner").classList.add("show");
+}
+$("banner").onclick = async () => {
+  await fly($("banner"), FULL(), "var(--bg)");
+  go("voice", {instant:true});
+  if (!$("log").children.length && reminderText) { add("bot", reminderText); speakLine(reminderText); }
+};
+
+// ---------------- 3. voice screen
+async function enterVoice() {
+  if (!S) await loadState().catch(() => {});
+  if (S) $("voice-hello").textContent = `هلا يا ${S.user.name_ar} 👋`;
+  if (!SETTINGS) await loadSettings().catch(() => {});
+  await loadView().catch(() => {}); renderBasket();
+}
+
+// ---------------- 4. Why this? sheet (all numbers from /api/why)
+async function openWhy() {
+  $("scrim").classList.add("on"); $("why").classList.add("on"); $("why").scrollTop = 0;
+  const bc = $("basket-card"); if (bc && current === "voice") bc.style.transform = "scale(.97)";
+  try { await loadWhy(); } catch (e) { $("w-learn").innerHTML = `<span class="err">⚠️ ${esc(e.message)}</span>`; return; }
+  const a = WHY.advice, due = a.running_out.length ? a.running_out : WHY.items.slice(0, 3);
+  const items = due.slice(0, 3).map(d => WHY.items.find(i => i.item_id === d.item_id) || d);
+  // LEARN: usual gap + a timeline of real past purchases
+  const now = new Date(WHY.now);
+  $("w-learn").innerHTML = items.map(i => {
+    const ds = (i.dates || []).map(d => new Date(d)), first = ds.length ? ds[0] : now, span = Math.max(1, (now - first) / 864e5);
+    const pos = d => 4 + 92 * ((d - first) / 864e5) / span;
+    return `<div style="margin:6px 0 12px"><div style="font-size:18px">بتشتري <b>${esc(shortName(i))}</b> كل <b data-roll="${i.median_gap_days}" data-dec="1">٠</b> يوم تقريباً</div>
+      <div class="en-sub">You usually buy it every ${i.median_gap_days} days · ${i.source || ""}</div>
+      <div class="timeline"><div class="axis"></div>${ds.map((d, k) => `<div class="dot" style="right:${pos(d)}%" title="${d.toISOString().slice(0, 10)}"></div>`).join("")}
+        <div class="now" style="right:96%"></div>${ds.length ? `<div class="lbl" style="right:${pos(ds[0])}%">${ds[0].toLocaleDateString("ar-JO", {day:"numeric", month:"short"})}</div>` : ""}<div class="lbl" style="right:96%">اليوم</div></div></div>`;
+  }).join("") || `<span class="muted">لسه ما في تاريخ طلبات</span>`;
+  // PREDICT: due score rings
+  $("w-pred").innerHTML = items.map(i => { const f = i.days_since / i.median_gap_days;
+    return `<div class="ring ${f >= .9 ? "due" : ""}">${ringSvg(f)}<div class="pct"><span data-roll="${Math.round(f * 100)}" data-suf="٪">٠</span></div>
+      <span>${esc(shortName(i))}</span><span class="en-sub">${ar(i.days_since)} من ${ar(i.median_gap_days)} يوم</span>${f >= .9 ? `<b style="color:var(--amber);font-size:13px">قرّب يخلص</b>` : ""}</div>`; }).join("");
+  // DECIDE: bandit style + uplift offer decision
+  const sc = a.style_scores || {}, mx = Math.max(...Object.values(sc), .001), od = a.offer_decision || {};
+  $("w-decide").innerHTML = `<div style="font-size:18px">أسلوب التذكير: <b>${esc(STYLE_AR[a.style] || a.style)}</b></div>
+    <div class="en-sub">Contextual bandit (LinUCB) picked “${esc(a.style)}”: highest expected reply for her context</div>
+    <div class="bars">${Object.entries(sc).sort((x, y) => y[1] - x[1]).map(([k, v]) => `<div class="b ${k === a.style ? "win" : ""}"><span>${esc(STYLE_AR[k] || k)}</span><span class="t"><i data-w="${100 * v / mx}"></i></span><span>${ar(v)}</span></div>`).join("")}</div>
+    <div class="row" style="margin-top:10px"><span>خصم؟ <span class="en-sub">Offer (uplift model)</span></span><b>${a.offer ? `${ar(a.offer.discount_pct)}٪ خصم` : "لا"}</b></div>
+    <div class="en-sub">${a.offer ? "Uplift ≥ threshold: the offer likely changes the outcome" : `uplift ${od.uplift ?? "—"} < ${od.threshold ?? "—"}: ${esc(od.reason || "no offer")}`}</div>
+    <div style="font-size:15px;margin-top:4px">${a.offer ? "الخصم بيفرق معها، فعطيناها إياه." : "كانت رح تطلب بكل الأحوال، فما عطينا خصم ما إله داعي."}</div>`;
+  requestAnimationFrame(() => requestAnimationFrame(() => document.querySelectorAll("#w-decide .t i").forEach(i => i.style.width = i.dataset.w + "%")));
+  // SPEAK
+  const sp = WHY.spoken;
+  $("w-speak").innerHTML = sp ? `<div class="quote">«${esc(sp.text)}»</div><div class="en-sub" style="margin-top:6px">The exact sentence Jibli said · ${esc(sp.ts.replace("T", " "))} · style: ${esc(sp.style || "")}</div>`
+                              : `<span class="muted">لسه جيبلي ما بعت تذكير اليوم</span>`;
+  fillRings($("why")); rollNumbers($("why"));
+}
+function closeWhy() { $("scrim").classList.remove("on"); $("why").classList.remove("on"); const bc = $("basket-card"); if (bc) bc.style.transform = ""; }
+$("scrim").onclick = closeWhy; $("why-close").onclick = closeWhy;
+
+// ---------------- 5. memory
+async function enterMemory() {
+  try { await loadState(); } catch (e) { return; }
+  const m = S.memory || [];
+  $("mem-list").innerHTML = m.map(f => `<div class="row"><span>${esc(f.fact)}</span><button class="x" data-forget="${esc(f.id)}" aria-label="forget">×</button></div>`).join("")
+                            || `<div class="row muted">جيبلي ما بيتذكّر إشي عنك هلق</div>`;
+}
+$("mem-list").onclick = async e => { const b = e.target.closest("[data-forget]"); if (!b) return;
+  const row = b.closest(".row"); row.style.transition = "all .35s var(--spring)"; row.style.opacity = 0; row.style.transform = "translateX(-40px)";
+  await post("/api/forget", {user_id:USER, memory_id:b.dataset.forget}); setTimeout(enterMemory, 350); toast("انمسح · Forgotten"); };
+$("mem-all").onclick = async () => { if (!confirm("أكيد بدك تمسحي كل إشي بيعرفه جيبلي عنك؟")) return;
+  await post("/api/forget", {user_id:USER, memory_id:"all"}); enterMemory(); toast("انمسح كل إشي · Everything forgotten"); };
+
+// ---------------- 6. settings (who confirms) + read-only limits
+const MODE_TEXT = (c, e) => ({self:["أنا بأكّد", "I confirm myself"], either:[`أنا أو ${c}، مين ما سبق`, `Me or ${e}, whoever is first`],
+                              family:[`لازم ${c} يوافق`, `${e} must approve and pay`]});
+async function enterSettings() {
+  try { await loadSettings(); } catch (e) { return; }
+  const c = SETTINGS.confirmer_ar || SETTINGS.confirmer || "العيلة", t = MODE_TEXT(c, SETTINGS.confirmer || "family");
+  $("modes").innerHTML = SETTINGS.modes.map(m => `<div class="row opt ${m === SETTINGS.confirm_mode ? "sel" : ""}" data-mode="${m}"><span>${esc(t[m][0])}<span class="en-sub">${esc(t[m][1])}${m === "either" ? " · default" : ""}</span></span><span class="check">✓</span></div>`).join("");
+  $("mode-foot").textContent = "جيبلي ما بيطلب إشي قبل ما حدا يقول «آه». · Nothing is ordered without a human yes.";
+  const L = SETTINGS.limits;
+  $("limits").innerHTML = `<div class="row"><span>حد الطلب الواحد<span class="en-sub">Spend cap per order</span></span><b>${esc(money(L.spend_caps.JOD, "JOD"))}</b></div>
+    <div class="row"><span>ساعات الهدوء<span class="en-sub">Quiet hours, no reminders</span></span><b style="direction:ltr">${String(L.quiet_hours[0]).padStart(2, "0")}:00–${String(L.quiet_hours[1]).padStart(2, "0")}:00</b></div>
+    <div class="row"><span>التذكيرات<span class="en-sub">Reminders</span></span><b>${ar(L.reminders_per_day)} باليوم بالأكثر</b></div>
+    <div class="row"><span>العروض<span class="en-sub">Offers</span></span><b>مرة كل ${ar(L.offer_every_days)} أيام بالأكثر</b></div>`;
+}
+$("modes").onclick = async e => { const o = e.target.closest("[data-mode]"); if (!o) return;
+  document.querySelectorAll("#modes .opt").forEach(x => x.classList.toggle("sel", x === o));
+  try { SETTINGS = await (await post(`/api/settings/${encodeURIComponent(USER)}`, {confirm_mode:o.dataset.mode})).json(); toast("انحفظ ✓ · Saved"); }
+  catch (e) { toast("⚠️ " + e.message); } };
+
+// ---------------- 7. family phone (Khaled)
+async function enterFamily() { await loadView().catch(() => {}); if (!SETTINGS) await loadSettings().catch(() => {}); renderFamily(true); }
+let famShown = null, famResult = null;
+function renderFamily(force) {
+  const v = VIEW; if (!v) return;
+  const who = esc(v.user.name_ar), c = esc(nm(v.confirmer));
+  $("fam-who").textContent = `📱 تلفون ${nm(v.confirmer)} · ${v.confirmer}'s phone`;
+  const key = v.waiting ? `${v.since}-${v.total}` : (famResult || "idle");
+  if (!force && key === famShown) return; famShown = key;
+  if (v.waiting && v.asked_user && v.confirm_mode === "self") {
+    $("fam-card").innerHTML = `<div class="push"><div class="head"><span>جيبلي · Careem</span><span>هلق</span></div>${who} بتأكّد طلباتها بنفسها 👌<div class="en-sub">She chose to confirm her own orders (Settings)</div></div>`;
+  } else if (v.waiting) {
+    const names = (v.items || []).map(i => i.name).join("، ") || v.summary || "";
+    $("fam-card").innerHTML = `<div class="push"><div class="head"><span><span class="app-ic" style="display:inline-flex;width:18px;height:18px;border-radius:5px;background:var(--green);color:#fff;font-size:11px;align-items:center;justify-content:center;margin-inline-end:5px">ج</span>جيبلي · Careem</span><span>هلق</span></div>
+      <div style="font-size:19px;font-weight:800">${who} بدها تطلب 🛒</div><div style="font-size:17px;margin:4px 0">${esc(names)}</div>
+      <div style="font-size:22px;font-weight:800">${esc(money(v.total, v.currency))}</div>
+      <div class="yn"><button class="btn primary" id="f-ok">وافق<small>Approve</small></button><button class="btn ghost" id="f-no">رفض<small>Decline</small></button></div>
+      <div class="en-sub" style="margin-top:8px">${v.asked_user ? `${who} كمان بتقدر توافق، مين ما سبق · whoever is first` : `${who} طلبت موافقتك · she asked you`}</div><div class="err" id="f-err"></div></div>`;
+    $("f-ok").onclick = () => decide(true); $("f-no").onclick = () => decide(false);
+  } else {
+    $("fam-card").innerHTML = `<div class="push" style="animation:none;opacity:.9"><div class="head"><span>جيبلي · Careem</span><span></span></div>${famResult || "ما في طلبات بتستنى موافقتك 👌"}</div>`;
+  }
+}
+async function decide(approve) {
+  $("f-ok").disabled = $("f-no").disabled = true;
+  try { const res = await post("/api/family", {user_id:USER, approve}), r = await res.json();
+        if (!res.ok) throw new Error(r.detail || r.error || res.statusText);
+        if (r.status === "ordered") { famResult = "✅ وافقت، الطلب بالطريق"; await loadView(); setTimeout(() => ordered(nm(VIEW.confirmer) || VIEW.confirmer), 600); }
+        else if (r.status === "declined") { famResult = "رفضت الطلب. ما انطلب شي."; await loadView(); renderFamily(true); }
+        else throw new Error(r.reason || r.error || r.status);
+  } catch (e) { $("f-ok").disabled = $("f-no").disabled = false; $("f-err").textContent = "⚠️ " + e.message; }
+}
+
+// ---------------- 8. confirmed -> tracking (simulated timer, labelled as demo)
+let trackTimer = null, ORDER_BY = "";
+async function ordered(by) {
+  ORDER_BY = by ? nm(by) || by : "";
+  const bc = $("basket-card");
+  if (bc && current === "voice") { const d = $("device").getBoundingClientRect(); await fly(bc, {left:d.width / 2 - 60, top:84, width:120, height:120, radius:"60px"}, "var(--green)"); }
+  go("track", {instant: !!bc});
+}
+function enterTrack() {
+  $("track-by").textContent = ORDER_BY ? `وافق ${ORDER_BY} · approved by ${ORDER_BY}` : "";
+  const dc = $("done-check"); dc.innerHTML = dc.innerHTML;  // replay the check animation
+  const steps = [...document.querySelectorAll("#steps li")], total = 20, t0 = Date.now(), etaMin = 20;
+  const pts = [[300, 40], [250, 66], [240, 124], [120, 136], [70, 150]], cap = $("cap"), map = $("map");
+  const place = k => { const [x, y] = pts[Math.min(pts.length - 1, k)], w = map.clientWidth / 358, h = map.clientHeight / 180;
+                       cap.style.left = `${x * w - 17}px`; cap.style.top = `${y * h - 17}px`; };
+  clearInterval(trackTimer); place(0); steps.forEach(s => s.classList.remove("on"));
+  trackTimer = setInterval(() => {
+    const s = (Date.now() - t0) / 1000, k = Math.min(3, Math.floor(s / (total / 3)));
+    steps.forEach((li, i) => li.classList.toggle("on", i <= k));
+    place(Math.round(Math.min(1, s / total) * (pts.length - 1)));
+    const left = Math.max(0, etaMin * 60 * (1 - s / total));
+    $("eta").textContent = `${String(Math.floor(left / 60)).padStart(2, "0")}:${String(Math.floor(left % 60)).padStart(2, "0")}`;
+    if (s >= total) { clearInterval(trackTimer); $("eta").textContent = "00:00"; setTimeout(() => current === "track" && go("learned"), 1400); }
+  }, 250);
+}
+
+// ---------------- 9. Jibli learned (next reminder from the live model) + bandit feedback
+async function enterLearned() {
+  $("th-res").textContent = ""; document.querySelectorAll(".thumbs button").forEach(b => b.classList.remove("sel"));
+  try { await loadWhy(); await loadState(); } catch (e) { return; }
+  // the item Jibli reminded about (live "running out" list), else the most frequent one
+  const first = (WHY.advice.running_out || [])[0], byGap = WHY.items.slice().sort((a, b) => a.median_gap_days - b.median_gap_days);
+  const it = (first && WHY.items.find(i => i.item_id === first.item_id)) || byGap[0];
+  if (!it) { $("learned-text").textContent = "تمام، سجّلنا الطلب."; return; }
+  // just ordered: the next one is about one usual gap from now (Careem orders may not be in the item history yet)
+  const inDays = it.days_since >= .9 * it.median_gap_days ? it.median_gap_days : it.median_gap_days - it.days_since, h = WHY.usual_hour;
+  const hourTxt = h == null ? "" : `، حوالي الساعة ${ar(h > 12 ? h - 12 : h)} ${h < 12 ? "الصبح" : "المسا"}، وقتك المعتاد`;
+  $("learned-text").innerHTML = `تمام 👌 تذكير ${esc(shortName(it))} الجاي بعد حوالي <b data-roll="${Math.round(inDays * 10) / 10}" data-dec="1">٠</b> أيام${hourTxt}.
+    <span class="en-sub">Next ${esc(it.name_en || it.item_id)} reminder in about ${Math.round(inDays * 10) / 10} days${h == null ? "" : `, around ${h}:00, your usual time`}.</span>`;
+  rollNumbers($("learned-text"));
+}
+async function thumbs(reply, btn) {
+  document.querySelectorAll(".thumbs button").forEach(b => b.classList.toggle("sel", b === btn));
+  try { const r = await (await post("/api/feedback", {user_id:USER, reply})).json();
+        $("th-res").textContent = r.rewarded ? `انحسبت مكافأة للأسلوب «${STYLE_AR[r.rewarded.style] || r.rewarded.style}» · bandit reward recorded`
+                                             : "شكراً! (التذكير اللي قبل انحسب جوابه) · thanks"; }
+  catch (e) { $("th-res").textContent = "⚠️ " + e.message; }
+}
+$("th-up").onclick = e => thumbs("yes", e.currentTarget); $("th-down").onclick = e => thumbs("no", e.currentTarget);
+
+// ---------------- screen hooks + demo bar
+const ENTER = {home:enterHome, lock:enterLock, voice:enterVoice, memory:enterMemory, settings:enterSettings, family:enterFamily, track:enterTrack, learned:enterLearned};
+const showDock = () => { $("dock").style.display = current === "voice" ? "" : "none"; };
+const _go = go; go = (id, o) => { _go(id, o); showDock(); };
+function toggleDemo(on) { $("demo").classList.toggle("on", on ?? !$("demo").classList.contains("on")); }
+document.addEventListener("keydown", e => { if (e.target.tagName === "INPUT") return; if (e.key === "d" || e.key === "D") toggleDemo(); });
+let taps = 0; $("sb").addEventListener("click", () => { taps++; clearTimeout($("sb").t); $("sb").t = setTimeout(() => taps = 0, 600); if (taps >= 3) { taps = 0; toggleDemo(); } });
+$("demo").addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) { e.stopPropagation(); go(b.dataset.go); } });
+$("d-close").onclick = () => toggleDemo(false);
+$("d-remind").onclick = () => { reminderText = null; go("lock"); enterLock(); };
+if (new URLSearchParams(location.search).has("demo")) toggleDemo(true);
+
+setInterval(() => ["voice", "family"].includes(current) && pollView(), 2500);
+loadState().catch(() => {}); loadSettings().catch(() => {});
+const START = (location.hash || "#lock").slice(1);
+if (START === "why") { go("voice", {instant:true}); setTimeout(openWhy, 300); }
+else go(START in ENTER ? START : "lock", {instant:true});
+if ("speechSynthesis" in window) speechSynthesis.getVoices();
+</script>
+</body>
+</html>
