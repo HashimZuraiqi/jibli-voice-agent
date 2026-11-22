@@ -38,6 +38,11 @@
   .mic.rec { background:var(--red); box-shadow:0 0 0 14px #f9dedc, 0 6px 18px #0003; animation:pulse 1.2s infinite; }
   .mic:disabled { background:#9bb8a6; cursor:wait; }
   @keyframes pulse { 50% { box-shadow:0 0 0 22px #f9dedc, 0 6px 18px #0003; } }
+  .thinking { align-self:flex-end; background:var(--soft); color:var(--green-d); font-size:19px; display:flex; gap:10px; align-items:center; }
+  .thinking .dots { display:inline-flex; gap:4px; }
+  .thinking .dots i { width:8px; height:8px; border-radius:50%; background:var(--green); animation:blink 1.2s infinite; }
+  .thinking .dots i:nth-child(2) { animation-delay:.2s; } .thinking .dots i:nth-child(3) { animation-delay:.4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity:.25; transform:scale(.8); } 40% { opacity:1; transform:scale(1); } }
   .status { font-size:24px; font-weight:700; color:var(--green-d); min-height:32px; }
   .replay { background:none; border:0; color:var(--green-d); font-size:17px; cursor:pointer; }
   form { display:flex; gap:8px; margin-top:10px; }
@@ -113,13 +118,32 @@ if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => {
 
 function setBusy(b, label) { busy = b; $("mic").disabled = b; $("status").textContent = label || "اضغطي واحكي"; }
 
+// Live status while Jibli works ("عم بدوّر على خبز بكريم…"), from /api/progress, so the wait never feels dead.
+let thinking = null, progressTimer = null, lastN = -1;
+function startThinking() {
+  stopThinking();
+  thinking = document.createElement("div"); thinking.className = "msg thinking";
+  thinking.innerHTML = `<span class="dots"><i></i><i></i><i></i></span><span class="t">لحظة…</span>`;
+  $("log").appendChild(thinking); $("log").scrollTop = 1e9;
+  lastN = -1;
+  progressTimer = setInterval(async () => {
+    try {
+      const p = await (await fetch(`/api/progress/${encodeURIComponent(USER)}`)).json();
+      if (thinking && p.n !== lastN) { lastN = p.n; thinking.querySelector(".t").textContent = p.text; $("status").textContent = p.text; }
+    } catch (e) {}
+  }, 500);
+}
+function stopThinking() { clearInterval(progressTimer); progressTimer = null; if (thinking) thinking.remove(); thinking = null; }
+
 async function handle(promise, shownText) {
   setBusy(true, "لحظة…");
+  startThinking();
   try {
     const res = await promise; const r = await res.json();
     if (res.status === 503) throw new Error("الصوت مش شغّال هلق، اكتبي طلبك تحت.");
     if (res.status === 422) throw new Error("ما سمعت شي، جرّبي كمان مرة.");
     if (!res.ok) throw new Error(r.detail || r.error || res.statusText);
+    stopThinking();
     if (r.transcript && !shownText) add("me", r.transcript);
     add("bot", r.reply); play(r);
     const v = r.waiting;
@@ -127,8 +151,8 @@ async function handle(promise, shownText) {
     if (wasWaiting && v && !v.waiting && v.last && v.last.kind === "careem_order") { lastView = v; $("cards").innerHTML = DONE; }
     else render(v);
     if (v) wasWaiting = v.waiting;
-  } catch (e) { add("note err", "⚠️ " + e.message); }
-  finally { setBusy(false); }
+  } catch (e) { stopThinking(); add("note err", "⚠️ " + e.message); }
+  finally { stopThinking(); setBusy(false); }
 }
 
 function say(text) { add("me", text);
