@@ -31,7 +31,8 @@ CONFIRM_ALL = ("- Nothing is ordered or booked until it is confirmed: call reque
                "the family member when the user asks for that or a tool says the family must approve. Only call place_order when the user has just said yes. Never retry a failed checkout on your own; tell "
                "the user what went wrong.")
 CONFIRM_GROCERY = ("- Nothing is ordered until it is confirmed: get the basket price first, then call request_confirmation and stop "
-                   "and wait. Ask the user herself (by='user') by default: then she can say yes, or the family member who "
+                   "and wait. When you ask, read back in one short sentence the items with quantities, the total with "
+                   "delivery, and the delivery address (the saved place's name from user_info, e.g. the Home address). Ask the user herself (by='user') by default: then she can say yes, or the family member who "
                    "usually confirms can approve in their app, whoever is first (say this in a few words). Ask only the family "
                    "member (by=<their name>) when the user asks for that or a tool says the family must approve. Only call "
                    "place_order when the user has just said yes; a family member approves in their own app. Never retry a "
