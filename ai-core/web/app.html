@@ -394,6 +394,25 @@ const fmt = n => AR.format(n).replace(/[\u061C\u200E\u200F]/g, "");  // drop bid
 const ar = n => n == null ? "—" : fmt(n);
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const money = (v, cur) => v == null ? "" : `${ar(Number(v))} ${cur === "AED" ? "درهم" : cur === "JOD" ? "دينار" : (cur || "دينار")}`;
+// Demo clock: ?time=2026-11-23T17:30 (or ?time=17:30 for today) makes the whole app act at that moment, so a habit
+// like "Faris's Monday 17:00 ride to the gym" shows up on stage whatever the real time is. Every /api call carries it.
+const DEMO_TIME = new URLSearchParams(location.search).get("time");
+if (DEMO_TIME) {
+  const realFetch = window.fetch.bind(window);
+  window.fetch = (url, opts = {}) => {
+    if (typeof url === "string" && url.startsWith("/api/")) {
+      const isJson = opts.body && typeof opts.body === "string" && /json/.test((opts.headers || {})["Content-Type"] || "");
+      if (isJson) { try { const b = JSON.parse(opts.body); if (b && typeof b === "object" && !b.time) opts = {...opts, body: JSON.stringify({...b, time: DEMO_TIME})}; } catch (e) {} }
+      else url += (url.includes("?") ? "&" : "?") + "time=" + encodeURIComponent(DEMO_TIME);
+    }
+    return realFetch(url, opts);
+  };
+}
+function demoNow() {
+  if (!DEMO_TIME) return new Date();
+  if (DEMO_TIME.includes("T")) return new Date(DEMO_TIME);
+  const [h, m] = DEMO_TIME.split(":").map(Number), d = new Date(); d.setHours(h, m || 0, 0, 0); return d;
+}
 const post = (url, body) => fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
 const getJ = async url => { const r = await fetch(url); const j = await r.json(); if (!r.ok) throw new Error(j.detail || j.error || r.statusText); return j; };
 const STYLE_AR = {gentle:"لطيف وحنون", practical:"عملي ومختصر", family:"بذكر العيلة", short:"قصير جداً"};
@@ -458,7 +477,7 @@ const FULL = () => ({left:0, top:0, width:$("device").offsetWidth, height:$("dev
 
 // ---------------- clocks
 function tick() {
-  const n = new Date(), t = n.toLocaleTimeString("en-GB", {hour:"numeric", minute:"2-digit"});
+  const n = demoNow(), t = n.toLocaleTimeString("en-GB", {hour:"numeric", minute:"2-digit"});
   $("sb-time").textContent = t; $("lock-clock").textContent = t; $("fam-clock").textContent = t;
   $("lock-date").textContent = n.toLocaleDateString("ar-JO", {weekday:"long", day:"numeric", month:"long"});
 }

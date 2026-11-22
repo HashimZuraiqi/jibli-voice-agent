@@ -204,6 +204,9 @@ class CareemTools:
         km = _km(a, b)
         quotes = [{"product": p, "price_aed": round(base + per_km * km, 2), "eta_min": 4 + i * 2}
                   for i, (p, (base, per_km)) in enumerate(RIDE_PRODUCTS.items()) if not product or p == product]
+        amman = os.getenv("SANDBOX_WORLD", "dubai").lower() == "amman"  # the demo world is Amman: price rides in JOD
+        for x in quotes:
+            x["price"], x["currency"] = (round(x["price_aed"] * 0.193, 2), "JOD") if amman else (x["price_aed"], "AED")
         quote_id = "rq_" + uuid.uuid4().hex[:8]
         self.store.state.setdefault("ride_quotes", {})[quote_id] = {"pickup": pickup, "dropoff": dropoff, "km": round(km, 1),
                                                                      "quotes": quotes}
@@ -245,7 +248,8 @@ class CareemTools:
         prices = self.store.state.get("careem_prices", {}).get(uid, {})
         if tool == "rides_request":
             q = self.store.state["ride_quotes"][args["quote_id"]]
-            return next(x["price_aed"] for x in q["quotes"] if x["product"] == args["product"]), "AED", None
+            x = next(x for x in q["quotes"] if x["product"] == args["product"])
+            return x.get("price", x["price_aed"]), x.get("currency", "AED"), None
         if tool == "box_create_order":
             box = prices.get("box")
             if not box or any(box.get(k) is None or str(box[k]) != str(args.get(k)) for k in BOX_BINDING):

@@ -64,7 +64,15 @@ USERS = {
         "rhythm": {"water": (7, 1), "coffee": (24, 1), "hummus": (12, 1)},
         "usual_hour": 19, "price_sensitivity": 0.8,
     },
+    # Faris: the pitch opener. Works, then takes a Go from Work to the Gym every Monday around 17:00 (see SERVICES)
+    "faris": {
+        "name": "Faris", "name_ar": "فارس", "age": 21, "lang": "ar", "city": "Amman",
+        "family": [], "confirm_by": "Faris",  # pays and confirms himself
+        "rhythm": {"water": (7, 1), "coffee": (20, 1), "hummus": (10, 1)},
+        "usual_hour": 20, "price_sensitivity": 0.5,
+    },
 }
+OWN_RNG = {"lina": 22, "faris": 21}  # users added later get their own random stream, so nobody else's data changes
 
 
 def orders_for(uid, u, today, r=None):
@@ -148,6 +156,10 @@ SERVICES = {
                       + [(d, 17, "Work", "Gym", "Go") for d in (0, 2)] + [(d, 19, "Gym", "Home", "Go") for d in (0, 2)]
                       + [(3, 21, "Home", "Dubai Mall", "Comfort")],
              "box": None},
+    # Faris: Go to work every weekday morning, and after work on Monday a Go from Work to the Gym, then home
+    "faris": {"rides": [(d, 8, "Home", "Work", "Go") for d in (6, 0, 1, 2, 3)]
+                       + [(0, 17, "Work", "Gym", "Go"), (0, 19, "Gym", "Home", "Go")],
+              "box": None},
 }
 
 
@@ -156,10 +168,11 @@ def service_history(today):
     rides, boxes = [], []
     start = today - dt.timedelta(days=70)
     for uid, s in SERVICES.items():
+        r = random.Random(OWN_RNG[uid] + 100) if uid == "faris" else rng  # Faris doesn't shift anyone else's times
         for weekday, hour, a, b, product in s["rides"]:
             d = start + dt.timedelta(days=(weekday - start.weekday()) % 7)
             while d < today:
-                ts = dt.datetime.combine(d, dt.time(hour, rng.randint(0, 40)))
+                ts = dt.datetime.combine(d, dt.time(hour, r.randint(0, 40)))
                 rides.append({"user_id": uid, "ts": ts.isoformat(timespec="minutes"), "from": a, "to": b, "product": product})
                 d += dt.timedelta(days=7)
         if s["box"]:
@@ -180,7 +193,8 @@ def main(today=None):
                 "default_gap_days": g} for i, en, ar, p, un, cat, g in CATALOG]
     users = {k: {kk: vv for kk, vv in v.items() if kk != "rhythm"} for k, v in USERS.items()}
     # Lina has her own random stream so adding her leaves every other user's data unchanged
-    orders = [o for uid, u in USERS.items() for o in orders_for(uid, u, today, random.Random(22) if uid == "lina" else None)]
+    orders = [o for uid, u in USERS.items()
+              for o in orders_for(uid, u, today, random.Random(OWN_RNG[uid]) if uid in OWN_RNG else None)]
     (OUT / "catalog.json").write_text(json.dumps(catalog, ensure_ascii=False, indent=1))
     (OUT / "users.json").write_text(json.dumps(users, ensure_ascii=False, indent=1))
     (OUT / "orders.json").write_text(json.dumps(orders, ensure_ascii=False, indent=1))

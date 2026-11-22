@@ -77,6 +77,9 @@ def short(items):
     return ", ".join(f"{p['name_en']} / {p['name_ar']} (usual qty {p.get('usual_qty', 1)}, item_id {p['item_id']})" for p in items) or "nothing"
 
 
+ARABIC_DAYS = ["اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت", "أحد"]  # Monday first, like datetime.weekday()
+
+
 def ride_text(r):
     return f"usually {r['from']} -> {r['to']} by {r['product']} at this time ({r['times']} times)" if r else "none"
 
@@ -198,7 +201,8 @@ class Brain:
             if reply:
                 self.layer.feedback(user_id, reply, now)
                 steps.append({"step": "7 learn (reward)", "reminder_style": open_reminder[-1]["style"], "reply": reply})
-                if reply == "yes":
+                waiting = self.store.state["pending"].get(user_id)
+                if reply == "yes" and not (waiting and waiting.get("tool") == "rides_request"):
                     note = ("\nThe user just said yes to your reminder. Prepare what it offered (" + self.reminder_items(advice)
                             + "): build the cart or quote with the tools, get its price, then request_confirmation from the "
                             "user herself (by='user').")
@@ -287,7 +291,11 @@ class Brain:
                  if advice["offer"] and advice["running_out"] else "none, do not mention discounts")
         lang = "Jordanian Arabic dialect" if u["lang"] == "ar" else "Jordanian Arabic with a few English words"
         shown = advice if getattr(self.tools, "rides", True) else dict(advice, usual_ride=None)
-        text = prompt("reminder", name=f"{u['name']} ({u['name_ar']})", items=self.reminder_items(shown),
+        items = self.reminder_items(shown)
+        ride = self.prepare_usual_ride(user_id, now, shown)
+        if ride:
+            items = ride
+        text = prompt("reminder", name=f"{u['name']} ({u['name_ar']})", items=items,
                       style=advice["style"], style_hint=advice["style_hint"], offer=offer,
                       confirmer=u["confirm_by"], lang_rule=lang)
         msg, meta = self.llm.chat([{"role": "system", "content": text}])
@@ -295,6 +303,31 @@ class Brain:
         self.layer.record_reminder(user_id, now, advice)
         self.history.setdefault(user_id, []).append({"role": "assistant", "content": reply})
         return {"reply": reply, "advice": advice, "model": meta["model"]}
+
+    def prepare_usual_ride(self, user_id, now, advice):
+        """mcp-all with rides: quote the user's usual ride now and ask for the yes in the reminder itself, so a single
+        «اه يلا» books it at a price that was already fixed (it still goes through request_confirmation and every
+        guardrail). Returns the reminder's subject text, or None to remind about groceries as usual."""
+        r = advice.get("usual_ride")
+        if not (r and self.all_services() and getattr(self.tools, "rides", False)):
+            return None
+        ctx = {"user_id": user_id, "now": now, "text": "", "turn": self.turns.get(user_id, 0)}
+        q = self.tools.run("rides_get_quote", {"pickup": r["from"], "dropoff": r["to"], "product": r["product"]}, ctx)
+        quote = next((x for x in (q.get("quotes") or []) if x["product"] == r["product"]), None) if isinstance(q, dict) else None
+        if not quote:
+            return None
+        price, currency = quote.get("price", quote.get("price_aed")), quote.get("currency", "AED")
+        ok = self.tools.run("request_confirmation", {
+            "by": "user", "checkout_tool": "rides_request", "checkout_args": {"quote_id": q["quote_id"], "product": r["product"]},
+            "total": price, "currency": currency, "summary": f"{r['product']} ride {r['from']} -> {r['to']}"}, ctx)
+        if not isinstance(ok, dict) or ok.get("status") != "waiting":
+            return None
+        day = now.strftime("%A")
+        return (f"their usual ride: a Careem {r['product']} from {r['from']} to {r['to']}, which they take every {day} around "
+                f"this time ({r['times']} times). It is already priced ({price} {currency}, captain {quote.get('eta_min', 4)} "
+                f"minutes away) and waiting only for their yes. Greet them for the time of day, ask if they finished work, "
+                f"and offer to order it, e.g. «مسا الخير {self.store.users[user_id]['name_ar']}، خلصت شغلك؟ بدك أطلبلك من "
+                f"الشغل للجيم، زي كل {ARABIC_DAYS[now.weekday()]}؟». Do not mention groceries")
 
     def reminder_items(self, advice):
         parts = []
