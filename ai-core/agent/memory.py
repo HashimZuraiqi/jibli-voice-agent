@@ -1,12 +1,15 @@
-"""Long-term user memory with Mem0 (Bedrock or OpenRouter LLM for fact extraction, local multilingual embeddings, local Qdrant)."""
+"""Long-term user memory. Default: Amazon Bedrock AgentCore Memory (agentcore_memory.py).
+Backup: Mem0 (Bedrock or OpenRouter LLM for fact extraction, local multilingual embeddings, local Qdrant).
+
+MEMORY_PROVIDER=agentcore (default) or mem0. Mem0 is imported only when it is used, so the AgentCore path
+does not load it or download the embedding model.
+"""
 import logging
 import os
 
 os.environ.setdefault("MEM0_TELEMETRY", "False")  # no usage data sent to Mem0's analytics
 
-from mem0 import Memory  # noqa: E402
-
-from .personalization.guardrails import safe_to_remember
+from .personalization.guardrails import safe_to_remember  # noqa: E402
 
 logging.getLogger("mem0").setLevel(logging.ERROR)
 
@@ -21,8 +24,17 @@ SEED_FACTS = {
 }
 
 
+def make_memory(state_dir, models):
+    """MEMORY_PROVIDER=agentcore (default) or mem0 (backup, runs fully local apart from fact extraction)."""
+    if os.getenv("MEMORY_PROVIDER", "agentcore").lower() == "mem0":
+        return UserMemory(state_dir, models)
+    from .agentcore_memory import AgentCoreMemory
+    return AgentCoreMemory(SEED_FACTS)
+
+
 class UserMemory:
     def __init__(self, state_dir, models):
+        from mem0 import Memory
         self.infer = os.getenv("MEM0_INFER", "true").lower() == "true"
         self.models = models  # the LLM client's list, reordered in place so the working model is first
         self.mem = Memory.from_config({

@@ -101,7 +101,7 @@ async function refresh() {
   $("panel").innerHTML = `
     <h2>Profile</h2><div>${esc(s.user.name)} · ${esc(s.user.name_ar)} · ${s.user.age} · ${esc(s.user.city)}<br>
       <span class="muted">${s.user.family.map(f => `${esc(f.name)} (${esc(f.relation)}${f.pays ? ", pays" : ""})`).join(", ")}</span></div>
-    <h2>Memory (Mem0)</h2>${s.memory.length ? `<ul>${s.memory.map(m => `<li>${esc(m.fact)} <button class="x" title="forget" data-forget="${m.id}">×</button></li>`).join("")}</ul>` : '<p class="muted">nothing yet</p>'}
+    <h2>Memory (${esc(s.memory_provider || 'Mem0')})</h2>${s.memory.length ? `<ul>${s.memory.map(m => `<li>${esc(m.fact)} <button class="x" title="forget" data-forget="${m.id}">×</button></li>`).join("")}</ul>` : '<p class="muted">nothing yet</p>'}
     <h2>Predict · running out</h2>${s.predictions.length ? `<table><tr><th>Item</th><th>Every</th><th>Since</th><th>Due</th></tr>
       ${s.predictions.map(p => `<tr><td>${esc(p.name_en)}<br><span class="muted">${esc(p.name_ar)}</span></td><td>${p.median_gap_days} d</td><td>${p.days_since} d</td><td class="${p.due_score >= .9 ? "due" : ""}">${p.due_score}</td></tr>`).join("")}</table>`
       : `<p class="muted">No history: cold start. Similar users buy ${a.suggestions_for_new_user.map(x => esc(x.name_en)).join(", ")}.</p>`}
