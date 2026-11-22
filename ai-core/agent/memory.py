@@ -1,4 +1,4 @@
-"""Long-term user memory with Mem0 (OpenRouter LLM for fact extraction, local multilingual embeddings, local Qdrant)."""
+"""Long-term user memory with Mem0 (Bedrock or OpenRouter LLM for fact extraction, local multilingual embeddings, local Qdrant)."""
 import logging
 import os
 
@@ -26,14 +26,23 @@ class UserMemory:
         self.infer = os.getenv("MEM0_INFER", "true").lower() == "true"
         self.models = models  # the LLM client's list, reordered in place so the working model is first
         self.mem = Memory.from_config({
-            # one model only: with a "models" list Mem0 drops "model" and the OpenAI SDK rejects the request
-            "llm": {"provider": "openai", "config": {"model": models[0], "temperature": 0}},
+            "llm": self.llm_config(models),
             "embedder": {"provider": "fastembed",
                          "config": {"model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"}},
             "vector_store": {"provider": "qdrant", "config": {"path": str(state_dir / "qdrant"), "collection_name": "users",
                                                               "embedding_model_dims": 384, "on_disk": True}},
             "history_db_path": str(state_dir / "mem0_history.db"),
         })
+
+    @staticmethod
+    def llm_config(models):
+        if os.getenv("LLM_PROVIDER", "bedrock").lower() == "openrouter":
+            # one model only: with a "models" list Mem0 drops "model" and the OpenAI SDK rejects the request
+            return {"provider": "openai", "config": {"model": models[0], "temperature": 0}}
+        # fact extraction is a small job: Haiku on Bedrock, credentials from the environment
+        return {"provider": "aws_bedrock", "config": {
+            "model": os.getenv("BEDROCK_MEMORY_MODEL", "global.anthropic.claude-haiku-5-5"), "temperature": 0,
+            "max_tokens": 1024, "aws_region": os.getenv("AWS_REGION", "us-east-1")}}
 
     def seed(self, user_id):
         if not self.all(user_id):
@@ -46,7 +55,8 @@ class UserMemory:
         if not ok:
             return False, reason
         try:
-            self.mem.llm.config.model = self.models[0]
+            if os.getenv("LLM_PROVIDER", "bedrock").lower() == "openrouter":
+                self.mem.llm.config.model = self.models[0]  # follow the OpenRouter model that currently answers
             self.mem.add([{"role": "user", "content": text}], user_id=user_id, infer=self.infer)
             return True, "ok"
         except Exception as e:  # a failed memory write must not break the conversation
