@@ -4,7 +4,7 @@ import re
 
 from ..store import parse_ts
 
-SPEND_CAP_JOD = 30.0
+SPEND_CAP_JOD = 50.0  # after converting the basket's currency to JOD
 QUIET_HOURS = (22, 8)  # no reminders from 22:00 to 08:00
 OFFER_EVERY_DAYS = 7
 YES_WORDS = {"yes", "yeah", "ok", "okay", "sure", "confirm", "نعم", "اه", "ايوا", "ايوه", "تمام",

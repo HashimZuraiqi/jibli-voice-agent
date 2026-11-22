@@ -138,11 +138,11 @@ def test_failed_checkout_is_not_retried(tmp_path):
 
 
 def test_spend_cap_converts_sandbox_aed(tmp_path):
-    store, fake, tools = setup(tmp_path, total=60.0, currency="AED")  # about 11.6 JOD: under the 30 JOD cap
+    store, fake, tools = setup(tmp_path, total=60.0, currency="AED")  # about 11.6 JOD: under the 50 JOD cap
     build_cart(tools)
     tools.run("request_confirmation", {"by": "Khaled"}, ctx(1))
     assert tools.family_checkout("um_khaled", "Khaled", NOW)["status"] == "ordered"
-    store, fake, tools = setup(tmp_path / "b", total=200.0, currency="AED")  # about 38.6 JOD: over
+    store, fake, tools = setup(tmp_path / "b", total=300.0, currency="AED")  # about 57.9 JOD: over
     build_cart(tools)
     tools.run("request_confirmation", {"by": "Khaled"}, ctx(1))
     assert "cap" in tools.family_checkout("um_khaled", "Khaled", NOW)["reason"]
