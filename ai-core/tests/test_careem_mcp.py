@@ -265,3 +265,17 @@ def test_single_item_basket_uses_basket_total_not_item_price():
     assert CareemMCPTools.total(one) == 19.0
     assert CareemMCPTools.total({"price": {"price": {"total": 45.5}}}) == 45.5
     assert CareemMCPTools.total({"total": 4.25}) == 4.25
+
+
+def test_groceries_path_never_mentions_box_or_rides():
+    import types
+    from agent.brain import Brain, prompt
+    b = Brain.__new__(Brain)
+    b.tools = types.SimpleNamespace()  # CAREEM_PROVIDER=mcp / mock: groceries only
+    text = b.only_offered(prompt("system", confirm_rules=""))
+    assert "Box" not in text and "rides_" not in text and "Food:" not in text and "Quik" in text
+    advice = {"running_out": [], "usual_ride": {"to": "Work"},
+              "usual_box": {"due": True, "from": "Home", "to": "Work", "vehicle": "Car", "category": "x"}}
+    assert b.reminder_items(advice) == "nothing"
+    b.tools = types.SimpleNamespace(execute_pending=lambda *a: None)  # mcp-all keeps every service
+    assert "Box" in b.only_offered(prompt("system", confirm_rules=""))

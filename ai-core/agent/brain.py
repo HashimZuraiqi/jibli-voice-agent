@@ -108,7 +108,7 @@ class Brain:
         u = self.store.users[user_id]
         offer = (f"{advice['offer']['discount_pct']}% off this order (max {advice['offer']['max_jod']} JOD)"
                  if advice["offer"] else "none")
-        return prompt("system", name=u["name"], name_ar=u["name_ar"], age=u["age"], city=u["city"],
+        text = prompt("system", name=u["name"], name_ar=u["name_ar"], age=u["age"], city=u["city"],
                       now=now.strftime("%A %Y-%m-%d %H:%M"), family=self.family_text(u),
                       memory="\n".join("- " + m["fact"] for m in memory_facts) or "- nothing yet",
                       running_out=short(advice["running_out"]), cold_start=advice["cold_start"],
@@ -119,7 +119,24 @@ class Brain:
                       confirm_rules=(CONFIRM_ALL if hasattr(self.tools, "execute_pending") else CONFIRM_GROCERY)
                       + CONFIRM_MODE_RULES.get(self.store.state.get("settings", {}).get(user_id, {}).get("confirm_mode"), ""),
                       ride=ride_text(advice.get("usual_ride")) if getattr(self.tools, "rides", True) else "rides are not available yet",
-                      box=box_text(advice.get("usual_box")), places=self.places_text()) + sandbox_note() + SPEED_RULE
+                      box=box_text(advice.get("usual_box")), places=self.places_text())
+        return self.only_offered(text) + sandbox_note() + SPEED_RULE
+
+    def all_services(self):
+        """True on CAREEM_PROVIDER=mcp-all (careem.py: groceries, food, Box, rides); else groceries only."""
+        return hasattr(self.tools, "execute_pending")
+
+    def only_offered(self, text):
+        """The groceries path (mcp / mock) has no food, Box or ride tools: don't tell the model about them, so it
+        never offers a Careem Box delivery or a ride it can't do."""
+        if self.all_services():
+            return text
+        drop = ("- Food:", "- Box:", "- Rides:", "- Usual ride at this time:", "- Usual Careem Box delivery:")
+        lines = [l for l in text.split("\n") if not l.startswith(drop)]
+        return "\n".join(l.replace("You can order groceries (Quik), food delivery, Careem Box deliveries (send items by "
+                                    "motorbike, car or van) and Careem rides.",
+                                    "You can order groceries from Careem Quik (only groceries in this app).")
+                         for l in lines)
 
     def places_text(self):
         places = getattr(self.tools, "places", None) or {}
@@ -279,11 +296,12 @@ class Brain:
         self.history.setdefault(user_id, []).append({"role": "assistant", "content": reply})
         return {"reply": reply, "advice": advice, "model": meta["model"]}
 
-    @staticmethod
-    def reminder_items(advice):
+    def reminder_items(self, advice):
         parts = []
         if advice["running_out"]:
             parts.append("groceries running out: " + short(advice["running_out"]))
+        if not self.all_services():  # groceries path: never remind about a Box delivery or a ride it can't do
+            return "; ".join(parts) or "nothing"
         if advice.get("usual_box") and advice["usual_box"]["due"]:
             parts.append("their usual Careem Box delivery: " + box_text(advice["usual_box"]))
         if advice.get("usual_ride"):
