@@ -11,7 +11,7 @@ YES_WORDS = {"yes", "yeah", "ok", "okay", "sure", "confirm", "نعم", "اه", "
              "اطلب", "اطلبه", "اطلبها", "ماشي", "يلا", "موافق", "موافقه", "اكيد"}
 YES_PHRASES = (("order", "it"), ("go", "ahead"))
 # filler that may surround a yes; anything else makes consent unclear and the agent asks again
-FILLER = {"please", "thanks", "thank", "you", "habibi", "يا", "ابني", "بنتي", "حبيبي", "حبيبتي", "يسلمو", "يسلموا",
+FILLER = {"please", "thanks", "thank", "you", "habibi", "يا", "ابني", "بنتي", "حبيبي", "حبيبتي", "يسلمو", "يسلموا", "ريت",
           "شكرا", "الله", "يخليك", "يعطيك", "العافيه", "والله", "هلا", "طيب", "خلص", "اطلبلي", "هيك", "it", "go", "ahead", "order"}
 NO_WORDS = {"no", "not", "nope", "nah", "never", "dont", "don't", "cancel", "later", "stop", "wait", "hold",
             "لا", "لاء", "مش", "مو", "ما", "بلاش", "بعدين", "الغي", "الغاء", "وقف", "استنى", "مابدي"}

@@ -140,7 +140,7 @@ def test_cart_change_cancels_confirmation(store):
 
 
 def test_consent_needs_a_clear_yes():
-    for yes in ("اه", "اه اطلبه", "تمام", "yes please", "ok go ahead", "أكيد، اطلبه", "آه تمام!", "order it", "اه يا ابني اطلبه", "تمام يسلمو"):
+    for yes in ("اه", "اه اطلبه", "تمام", "yes please", "ok go ahead", "أكيد، اطلبه", "آه تمام!", "order it", "اه يا ابني اطلبه", "تمام يسلمو", "اه يا ريت"):
         assert g.says_yes(yes), yes
     for no in ("مش تمام", "لا", "لا تطلب", "الاهم الخبز", "not yet", "no, cancel it", "ما بدي",
                "لا، اطلبه بعدين", "لأ؛ تمام", "مو هلا، اطلب", "لاء اطلبه", "تمام؟ لا", "no.ok", "ok?no",
