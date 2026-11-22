@@ -352,7 +352,7 @@ def test_faris_usual_ride_reminder_then_one_yes_books_it(tools, monkeypatch):
 
     brain = Brain(tools.store, Mem(), Layer(), tools, LLM())
     r = brain.reminder("faris", monday)
-    assert "الجيم" in r["reply"]
+    assert "جيم" in r["reply"]  # "للجيم" (to the gym) has no "الجيم" substring: ل + الـ -> لل
     pending = tools.store.state["pending"]["faris"]
     assert pending["tool"] == "rides_request" and pending["currency"] == "JOD" and pending["by"] == "Faris"
     out = brain.handle("faris", "اه يلا", monday + dt.timedelta(minutes=1))
