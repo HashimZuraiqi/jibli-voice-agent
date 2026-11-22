@@ -71,7 +71,8 @@ scripts/                create_agentcore_memory.py (run once), careem_login.py (
 agent/careem.py         Careem MCP for all services (CAREEM_PROVIDER=mcp-all): groceries, food, Box, rides stand-in;
                         the LLM proposes the exact checkout, it runs once after a human yes
 agent/personalization/  repurchase, services (usual ride / Box), bandit, uplift, guardrails, layer
-careem-mcp-sandbox/     local careem-mcp server from Careem's spec + its CLI and acceptance tests
+careem-mcp-sandbox/     local careem-mcp server from Careem's spec + its CLI and acceptance tests;
+                        amman.py = Amman mode (start --amman): grocery tools keep the real cart, Jordanian catalog, JOD
 agent/brain.py          the 7-step loop
 data/                   generate.py → catalog, users, orders, synthetic bandit + uplift logs
 web/app.py, web/index.html   chat page + side panel (memory, due items, bandit choice, offer, guardrail log)

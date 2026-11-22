@@ -1,6 +1,7 @@
 """Control the local careem-mcp server (spec/BUILD.md §6).
 
   python careem_mcp.py start | stop | status | logs
+  python careem_mcp.py start --amman              groceries remember the cart (Jordanian catalog, JOD, Amman)
   python careem_mcp.py scenarios [tool]          list scenarios
   python careem_mcp.py scenario <tool> [name]    force a scenario (no name: clear it)
   python careem_mcp.py reset                      clear all forced scenarios
@@ -43,7 +44,8 @@ def start():
         print(f"already running on {URL}/mcp")
         return
     RUN.mkdir(exist_ok=True)
-    proc = subprocess.Popen([sys.executable, str(server.HERE / "server.py"), "--port", str(PORT)],
+    env = dict(os.environ, **({"SANDBOX_WORLD": "amman"} if "--amman" in sys.argv else {}))
+    proc = subprocess.Popen([sys.executable, str(server.HERE / "server.py"), "--port", str(PORT)], env=env,
                             stdout=open(LOG, "a"), stderr=subprocess.STDOUT, start_new_session=True)
     PID.write_text(str(proc.pid))
     for _ in range(50):

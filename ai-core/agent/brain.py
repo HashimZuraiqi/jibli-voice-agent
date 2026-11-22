@@ -15,6 +15,8 @@ def sandbox_note():
     url = os.getenv("CAREEM_MCP_URL", "")
     if os.getenv("CAREEM_PROVIDER", "mock").lower() != "mcp" or not any(h in url for h in ("127.0.0.1", "localhost")):
         return ""
+    if os.getenv("SANDBOX_WORLD", "dubai").lower() == "amman":
+        return ""  # Amman mode: the sandbox builds the cart she asked for, so differences are real again
     return ("\n\nTest mode: this is Careem's MCP sandbox, which answers with a fixed test basket. After "
             "cart_get_basket_price, read back exactly what the priced basket contains (items, quantities, total, address) "
             "in one short sentence and ask for a yes. Do not point out differences from what the user asked for and do "

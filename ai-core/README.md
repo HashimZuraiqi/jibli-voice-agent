@@ -50,6 +50,20 @@ Memory runs on Amazon Bedrock AgentCore Memory. Backup: `MEMORY_PROVIDER=mem0` i
 - The phone must reach the laptop: use the laptop's LAN IP (`--host 0.0.0.0`). Browsers only allow the mic on
   http://localhost or https, so run the elder page on the laptop itself.
 
+## Demo sandbox: Amman mode
+
+Careem's sandbox always returns the same Dubai test basket in AED. For the demo, run the in-repo sandbox in Amman
+mode: the grocery tools build the cart she actually asked for from Jibli's Jordanian catalog (`data/catalog.json`),
+priced in JOD, delivered to an Amman address. Same tool names and response shapes; nothing is ever ordered.
+
+```bash
+.venv/bin/python careem-mcp-sandbox/careem_mcp.py stop            # if another sandbox is on :8787
+.venv/bin/python careem-mcp-sandbox/careem_mcp.py start --amman
+```
+`.env`: `CAREEM_PROVIDER=mcp`, `CAREEM_MCP_URL=http://127.0.0.1:8787/mcp`, `SANDBOX_WORLD=amman`, and remove
+`CAREEM_LAT`/`CAREEM_LNG` (the Amman address comes from `user_info`). Pitch line: "Careem's MCP tools on a local
+sandbox built from Careem's spec, with our Amman test data".
+
 ## Real Careem MCP
 
 - **Sandbox (build + test, never orders):** build it once from https://builders.careem.com/sandbox/careem-mcp-sandbox.zip
