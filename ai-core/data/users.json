@@ -74,14 +74,14 @@
   "usual_hour": 19,
   "price_sensitivity": 0.8
  },
- "faris": {
-  "name": "Faris",
-  "name_ar": "فارس",
+ "hashim": {
+  "name": "Hashim",
+  "name_ar": "هاشم",
   "age": 21,
   "lang": "ar",
   "city": "Amman",
   "family": [],
-  "confirm_by": "Faris",
+  "confirm_by": "Hashim",
   "usual_hour": 20,
   "price_sensitivity": 0.5
  }

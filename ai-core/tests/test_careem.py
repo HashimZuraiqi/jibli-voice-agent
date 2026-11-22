@@ -316,14 +316,14 @@ def test_meaning_yes_places_and_no_cancels(tools):
     assert not tools.store.state["pending"]                        # a clear no cancels the waiting order
 
 
-def test_faris_usual_ride_reminder_then_one_yes_books_it(tools, monkeypatch):
-    """The pitch opener: Monday 17:30, Jibli offers Faris his usual Go from Work to the Gym (already priced, in JOD
+def test_hashim_usual_ride_reminder_then_one_yes_books_it(tools, monkeypatch):
+    """The pitch opener: Monday 17:30, Jibli offers Hashim his usual Go from Work to the Gym (already priced, in JOD
     in the Amman world), and a single «اه يلا» books it once."""
     from agent.brain import Brain
     from agent.llm import Message
     monkeypatch.setenv("SANDBOX_WORLD", "amman")
     monday = dt.datetime(2026, 11, 23, 17, 30)
-    ride = services.usual_ride(services.load(), "faris", monday)
+    ride = services.usual_ride(services.load(), "hashim", monday)
     assert ride and (ride["from"], ride["to"], ride["product"]) == ("Work", "Gym", "Go")
 
     class LLM:
@@ -333,7 +333,7 @@ def test_faris_usual_ride_reminder_then_one_yes_books_it(tools, monkeypatch):
                 return Message("YES"), {"model": "test"}
             if "proactive reminder" in first:
                 assert "Gym" in first and "اثنين" in first  # the usual ride, said for Monday
-                return Message("مسا الخير فارس، خلصت شغلك؟ بدك أطلبلك من الشغل للجيم، زي كل اثنين؟"), {"model": "test"}
+                return Message("مسا الخير هاشم، خلصت شغلك؟ بدك أطلبلك من الشغل للجيم، زي كل اثنين؟"), {"model": "test"}
             return Message("تمام، السيارة جاية بعد ٤ دقايق."), {"model": "test"}
 
     advice = {"running_out": [], "cold_start": False, "suggestions_for_new_user": [], "usual_ride": ride, "usual_box": None,
@@ -351,18 +351,18 @@ def test_faris_usual_ride_reminder_then_one_yes_books_it(tools, monkeypatch):
         def learn(self, u, t): return True, "ok"
 
     brain = Brain(tools.store, Mem(), Layer(), tools, LLM())
-    r = brain.reminder("faris", monday)
+    r = brain.reminder("hashim", monday)
     assert "جيم" in r["reply"]  # "للجيم" (to the gym) has no "الجيم" substring: ل + الـ -> لل
-    pending = tools.store.state["pending"]["faris"]
-    assert pending["tool"] == "rides_request" and pending["currency"] == "JOD" and pending["by"] == "Faris"
-    out = brain.handle("faris", "اه يلا", monday + dt.timedelta(minutes=1))
+    pending = tools.store.state["pending"]["hashim"]
+    assert pending["tool"] == "rides_request" and pending["currency"] == "JOD" and pending["by"] == "Hashim"
+    out = brain.handle("hashim", "اه يلا", monday + dt.timedelta(minutes=1))
     placed = [s for s in out["steps"] if s.get("tool") == "place_order"]
-    assert placed and placed[0]["result"]["status"] == "ordered" and "faris" not in tools.store.state["pending"]
-    assert sum(o["user_id"] == "faris" for o in tools.store.state.get("service_orders", [])) == 1
+    assert placed and placed[0]["result"]["status"] == "ordered" and "hashim" not in tools.store.state["pending"]
+    assert sum(o["user_id"] == "hashim" for o in tools.store.state.get("service_orders", [])) == 1
 
 
 def test_ride_booking_reports_the_confirmed_price_and_currency(tools, monkeypatch):
-    """Live run: Faris agreed to 9.45 JOD, the booking answered price_aed 48.97 and the agent told him the price changed."""
+    """Live run: Hashim agreed to 9.45 JOD, the booking answered price_aed 48.97 and the agent told him the price changed."""
     monkeypatch.setenv("SANDBOX_WORLD", "amman")
     q = tools.run("rides_get_quote", {"pickup": "Work", "dropoff": "Gym", "product": "Go"}, ctx(1))
     go = q["quotes"][0]
@@ -375,7 +375,7 @@ def test_ride_booking_reports_the_confirmed_price_and_currency(tools, monkeypatc
 
 
 def test_amman_ride_is_priced_like_amman_and_booking_keeps_the_quoted_eta(tools, monkeypatch):
-    """Faris: Work -> Gym in the Amman world is about 5 JOD (not a converted Dubai fare), and the captain eta stays as quoted."""
+    """Hashim: Work -> Gym in the Amman world is about 5 JOD (not a converted Dubai fare), and the captain eta stays as quoted."""
     monkeypatch.setenv("SANDBOX_WORLD", "amman")
     q = tools.run("rides_get_quote", {"pickup": "Work", "dropoff": "Gym", "product": "Go"}, ctx(1))
     go = q["quotes"][0]

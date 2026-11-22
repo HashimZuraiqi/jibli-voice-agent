@@ -326,7 +326,7 @@ class CareemTools:
         q = self.store.state.get("ride_quotes", {}).get(p["args"]["quote_id"])
         x = next(x for x in q["quotes"] if x["product"] == p["args"]["product"])
         # the price and currency that were quoted and confirmed (JOD in the Amman world); reporting price_aed here made
-        # the agent warn Faris that the price "changed" to ~49 dirhams after he agreed to 9.45 JOD
+        # the agent warn Hashim that the price "changed" to ~49 dirhams after he agreed to 9.45 JOD
         return {"ride_id": "ride_" + uuid.uuid4().hex[:6], "status": "captain_assigned", "captain": "Ahmed K.",
                 "eta_min": x.get("eta_min", 4), "product": p["args"]["product"], "from": q["pickup"], "to": q["dropoff"],
                 "price": x.get("price", x["price_aed"]), "currency": x.get("currency", "AED")}

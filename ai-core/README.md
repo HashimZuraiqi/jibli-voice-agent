@@ -78,15 +78,15 @@ approves → tracking → "Jibli learned".
 - The phone must reach the laptop: use the laptop's LAN IP (`--host 0.0.0.0`). Browsers only allow the mic on
   http://localhost or https, so run the elder page on the laptop itself.
 
-## Faris: the ride opener (live demo)
+## Hashim: the ride opener (live demo)
 
-Faris (21, Amman, confirms himself) takes a Careem **Go from Work to the Gym every Monday around 17:00**
+Hashim (21, Amman, confirms himself) takes a Careem **Go from Work to the Gym every Monday around 17:00**
 (`data/generate.py`, 10 weeks of history). On a Monday evening Jibli prices that ride first, then offers it:
-«مسا الخير فارس، خلصت شغلك؟ بدك أطلبلك من الشغل للجيم، زي كل اثنين؟» — one «اه يلا» books it (captain ~4 min).
+«مسا الخير هاشم، خلصت شغلك؟ بدك أطلبلك من الشغل للجيم، زي كل اثنين؟» — one «اه يلا» books it (captain ~4 min).
 
 - Needs `CAREEM_PROVIDER=mcp-all` (rides are a local stand-in; Careem's sandbox has no rides) and `SANDBOX_WORLD=amman`
   (ride prices in JOD).
-- Demo clock, so it works on any day: **http://127.0.0.1:8000/app/faris?time=2026-11-23T17:30** (Monday 17:30).
+- Demo clock, so it works on any day: **http://127.0.0.1:8000/app/hashim?time=2026-11-23T17:30** (Monday 17:30).
   Press Reset first (a reminder is sent at most once a day), then open the lock screen.
 
 ## Demo sandbox: Amman mode

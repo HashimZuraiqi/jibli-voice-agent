@@ -395,7 +395,7 @@ const ar = n => n == null ? "—" : fmt(n);
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const money = (v, cur) => v == null ? "" : `${ar(Number(v))} ${cur === "AED" ? "درهم" : cur === "JOD" ? "دينار" : (cur || "دينار")}`;
 // Demo clock: ?time=2026-11-23T17:30 (or ?time=17:30 for today) makes the whole app act at that moment, so a habit
-// like "Faris's Monday 17:00 ride to the gym" shows up on stage whatever the real time is. Every /api call carries it.
+// like "Hashim's Monday 17:00 ride to the gym" shows up on stage whatever the real time is. Every /api call carries it.
 const DEMO_TIME = new URLSearchParams(location.search).get("time");
 if (DEMO_TIME) {
   const realFetch = window.fetch.bind(window);
@@ -573,7 +573,7 @@ async function handle(promise, shown) {
     if (r.transcript && !shown) add("me", r.transcript);
     add("bot", r.reply); play(r);
     if (r.waiting) { VIEW = r.waiting; renderBasket(); }
-    // placed: a groceries-path event (kind careem_order) or an all-services order record (mcp-all: ok + service, e.g. Faris's ride)
+    // placed: a groceries-path event (kind careem_order) or an all-services order record (mcp-all: ok + service, e.g. Hashim's ride)
     const last = VIEW && VIEW.last, placed = last && (last.kind === "careem_order" || (last.ok && last.service));
     if (wasWaiting && VIEW && !VIEW.waiting && placed) setTimeout(() => ordered(last.by || last.confirmed_by), 900);
   } catch (e) { add("note err", "⚠️ " + e.message); }
@@ -627,7 +627,7 @@ function renderBasket() {
   // the server sends no address; guessing it from the summary repeated the whole English order summary after 📍 (mcp-all)
   const addr = v.address || "عنوانك المحفوظ · البيت";
   const mine = v.asked_user && (!SETTINGS || SETTINGS.confirm_mode !== "family");
-  // a Careem ride (Faris): no basket, no delivery address, no "Why?" link, no "or <confirmer>" line when he confirms himself
+  // a Careem ride (Hashim): no basket, no delivery address, no "Why?" link, no "or <confirmer>" line when he confirms himself
   const ride = v.tool === "rides_request", leg = ride && /(\w+)\s*->\s*(\w+)/.exec(v.summary || "");
   const place = x => ({Work: "الشغل", Gym: "الجيم", Home: "البيت"})[x] || x;
   const head = ride ? `<h3><span>🚗 مشوار كريم</span></h3>${leg ? `<div class="row"><span>${esc(place(leg[1]))} ← ${esc(place(leg[2]))}</span><span>كابتن قريب منك</span></div>` : ""}`
@@ -700,7 +700,7 @@ async function enterLock() {
   try {
     const r = await (await post("/api/reminder", {user_id:USER})).json();
     // blocked (already reminded today) answers have no "ride", but if a usual ride is due now, today's reminder was that
-    // ride: keep its title instead of falling back to the grocery "running out" title (it said «حمص قرّب يخلص» for Faris)
+    // ride: keep its title instead of falling back to the grocery "running out" title (it said «حمص قرّب يخلص» for Hashim)
     reminderRide = r.ride || (!r.reply && r.advice && r.advice.usual_ride) || null;
     if (r.reply) reminderText = r.reply;
     else {  // blocked (already reminded today / quiet hours): show the last sentence Jibli said, or the live due items
@@ -851,7 +851,7 @@ async function ordered(by) {
   go("track", {instant: !!bc});
 }
 function enterTrack() {
-  // a ride (Faris) tracks the captain coming to him, not a Quik delivery
+  // a ride (Hashim) tracks the captain coming to him, not a Quik delivery
   const track = $("track"); TRACK_HTML = TRACK_HTML || track.innerHTML;
   if (track.innerHTML !== TRACK_HTML) track.innerHTML = TRACK_HTML;
   if (LAST_RIDE) {

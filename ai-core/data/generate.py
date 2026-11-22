@@ -64,15 +64,15 @@ USERS = {
         "rhythm": {"water": (7, 1), "coffee": (24, 1), "hummus": (12, 1)},
         "usual_hour": 19, "price_sensitivity": 0.8,
     },
-    # Faris: the pitch opener. Works, then takes a Go from Work to the Gym every Monday around 17:00 (see SERVICES)
-    "faris": {
-        "name": "Faris", "name_ar": "فارس", "age": 21, "lang": "ar", "city": "Amman",
-        "family": [], "confirm_by": "Faris",  # pays and confirms himself
+    # Hashim: the pitch opener. Works, then takes a Go from Work to the Gym every Monday around 17:00 (see SERVICES)
+    "hashim": {
+        "name": "Hashim", "name_ar": "هاشم", "age": 21, "lang": "ar", "city": "Amman",
+        "family": [], "confirm_by": "Hashim",  # pays and confirms himself
         "rhythm": {"water": (7, 1), "coffee": (20, 1), "hummus": (10, 1)},
         "usual_hour": 20, "price_sensitivity": 0.5,
     },
 }
-OWN_RNG = {"lina": 22, "faris": 21}  # users added later get their own random stream, so nobody else's data changes
+OWN_RNG = {"lina": 22, "hashim": 21}  # users added later get their own random stream, so nobody else's data changes
 
 
 def orders_for(uid, u, today, r=None):
@@ -156,8 +156,8 @@ SERVICES = {
                       + [(d, 17, "Work", "Gym", "Go") for d in (0, 2)] + [(d, 19, "Gym", "Home", "Go") for d in (0, 2)]
                       + [(3, 21, "Home", "Dubai Mall", "Comfort")],
              "box": None},
-    # Faris: Go to work every weekday morning, and after work on Monday a Go from Work to the Gym, then home
-    "faris": {"rides": [(d, 8, "Home", "Work", "Go") for d in (6, 0, 1, 2, 3)]
+    # Hashim: Go to work every weekday morning, and after work on Monday a Go from Work to the Gym, then home
+    "hashim": {"rides": [(d, 8, "Home", "Work", "Go") for d in (6, 0, 1, 2, 3)]
                        + [(0, 17, "Work", "Gym", "Go"), (0, 19, "Gym", "Home", "Go")],
               "box": None},
 }
@@ -168,7 +168,7 @@ def service_history(today):
     rides, boxes = [], []
     start = today - dt.timedelta(days=70)
     for uid, s in SERVICES.items():
-        r = random.Random(OWN_RNG[uid] + 100) if uid == "faris" else rng  # Faris doesn't shift anyone else's times
+        r = random.Random(OWN_RNG[uid] + 100) if uid == "hashim" else rng  # Hashim doesn't shift anyone else's times
         for weekday, hour, a, b, product in s["rides"]:
             d = start + dt.timedelta(days=(weekday - start.weekday()) % 7)
             while d < today:
