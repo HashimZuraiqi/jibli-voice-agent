@@ -1,12 +1,23 @@
 """The brain: 7 steps per user message (hear, remember, advise, think, act, confirm, learn)."""
 import json
 import os
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from .personalization import guardrails as g
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
 MAX_TOOL_ROUNDS = 12  # the real Careem chain (user_info, searches, cart, price, confirm, order) needs ~9-10
+# every LLM round is a full Bedrock call, so fewer rounds = a faster answer
+SPEED_RULE = ("\n\nSpeed: the user is waiting on a voice call. Call tools that don't depend on each other in the same turn "
+              "(for example all product searches at once), don't call a tool whose answer you already have, and keep the "
+              "spoken reply to one or two short sentences.")
+BACKGROUND = ThreadPoolExecutor(max_workers=2)  # memory writes happen after the reply is sent
+
+
+def ms(t0):
+    return int((time.monotonic() - t0) * 1000)
 
 
 def sandbox_note():
@@ -78,7 +89,7 @@ class Brain:
                       style=advice["style"], style_hint=advice["style_hint"], offer=offer,
                       orders=self.orders_text(user_id),
                       confirm_rules=CONFIRM_ALL if hasattr(self.tools, "execute_pending") else CONFIRM_GROCERY, ride=ride_text(advice.get("usual_ride")),
-                      box=box_text(advice.get("usual_box")), places=self.places_text()) + sandbox_note()
+                      box=box_text(advice.get("usual_box")), places=self.places_text()) + sandbox_note() + SPEED_RULE
 
     def places_text(self):
         places = getattr(self.tools, "places", None) or {}
@@ -101,13 +112,16 @@ class Brain:
 
     def handle(self, user_id, text, now):
         self.turn += 1
+        start = time.monotonic()
         steps = [{"step": "1 hear", "text": text}]
         self.memory.seed(user_id)
 
-        facts = self.memory.recall(user_id, text)
-        steps.append({"step": "2 remember", "facts": [f["fact"] for f in facts]})
-
+        t0 = time.monotonic()
+        recall = BACKGROUND.submit(self.memory.recall, user_id, text)  # AgentCore search runs while the layer advises
         advice = self.layer.advise(user_id, now)
+        advise_ms = ms(t0)
+        facts = recall.result()
+        steps.append({"step": "2 remember", "facts": [f["fact"] for f in facts], "ms": ms(t0)})
         open_reminder = [e for e in self.store.events(user_id, "reminder") if "reply" not in e]
         note = ""
         if open_reminder:  # the user's answer to our reminder is the bandit's reward
@@ -120,7 +134,8 @@ class Brain:
                             + "): build the cart or quote with the tools, get its price, then request_confirmation from the "
                             "family member who usually confirms.")
         steps.append({"step": "3 advise", "running_out": [p["item_id"] for p in advice["running_out"]],
-                      "style": advice["style"], "offer": advice["offer"], "offer_decision": advice["offer_decision"]})
+                      "style": advice["style"], "offer": advice["offer"], "offer_decision": advice["offer_decision"],
+                      "ms": advise_ms})
 
         msgs = self.history.setdefault(user_id, [])
         msgs.append({"role": "user", "content": text})
@@ -128,10 +143,11 @@ class Brain:
         ctx = {"user_id": user_id, "now": now, "text": text, "turn": self.turn}
         reply = ""
         for _ in range(MAX_TOOL_ROUNDS):
+            t0 = time.monotonic()
             msg, meta = self.llm.chat(convo, self.tools.schemas())
             calls = msg.tool_calls or []
             steps.append({"step": "4 think", "model": meta["model"], "said": msg.content,
-                          "tool_calls": [c.function.name for c in calls]})
+                          "tool_calls": [c.function.name for c in calls], "ms": ms(t0)})
             if not calls:
                 reply = (msg.content or "").strip()
                 break
@@ -139,23 +155,26 @@ class Brain:
                           "tool_calls": [{"id": c.id, "type": "function",
                                           "function": {"name": c.function.name, "arguments": c.function.arguments}} for c in calls]})
             for c in calls:
+                t0 = time.monotonic()
                 try:
                     args = json.loads(c.function.arguments or "{}")
                     result = self.tools.run(c.function.name, args, ctx)
                 except json.JSONDecodeError:
                     args, result = None, {"error": "arguments were not valid JSON"}
                 kind = "6 confirm" if c.function.name in ("request_confirmation", "place_order") else "5 act"
-                steps.append({"step": kind, "tool": c.function.name, "args": args, "result": result})
+                steps.append({"step": kind, "tool": c.function.name, "args": args, "result": result, "ms": ms(t0)})
                 convo.append({"role": "tool", "tool_call_id": c.id, "content": json.dumps(result, ensure_ascii=False)})
         else:
             reply = "عذراً، صار في مشكلة. رح أحاول مرة ثانية." if self.store.users[user_id]["lang"] != "en" else "Sorry, something went wrong."
         msgs.append({"role": "assistant", "content": reply})
 
-        stored, why = self.memory.learn(user_id, text)
-        steps.append({"step": "7 learn (memory)", "stored": stored, "reason": why})
-        if not stored and why.startswith("sensitive"):
+        ok, why = g.safe_to_remember(text)  # local check, instant
+        if ok:  # the AgentCore / Mem0 write happens after the reply goes out, so the user doesn't wait for it
+            BACKGROUND.submit(self.memory.learn, user_id, text)
+        else:
             self.store.log(user_id, "guardrail", now, check="memory", ok=False, reason=why)
-        return {"reply": reply, "steps": steps}
+        steps.append({"step": "7 learn (memory)", "stored": "in background" if ok else False, "reason": "ok" if ok else why})
+        return {"reply": reply, "steps": steps, "ms": ms(start)}
 
     def reminder(self, user_id, now):
         """Proactive voice note when items run out (bandit picks the style, uplift decides the offer)."""

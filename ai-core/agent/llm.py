@@ -113,6 +113,9 @@ class BedrockLLM:
         self.models = [m.strip() for m in model.split(",") if m.strip()]
         self.region = os.getenv("AWS_REGION", "us-east-1")
         self.max_tokens = int(os.getenv("BEDROCK_MAX_TOKENS", "1024"))
+        # prompt caching: the system prompt + tool list are the same on every round of the tool loop, so Bedrock reuses
+        # them instead of re-reading ~thousands of tokens each call (faster first token). Turned off by itself if refused.
+        self.cache = os.getenv("BEDROCK_CACHE", "1") != "0"
         self._client = client
         self.calls = 0
 
@@ -125,24 +128,44 @@ class BedrockLLM:
             self._client = boto3.session.Session().client("bedrock-runtime", region_name=self.region)
         return self._client
 
-    def chat(self, messages, tools=None):
-        from botocore.exceptions import ClientError
+    def request(self, messages, tools):
         system, msgs = to_converse(messages)
         # no temperature: Claude Sonnet 5.5 / Haiku 5.5 reject non-default sampling params with a ValidationException
         kw = {"messages": msgs, "system": system, "inferenceConfig": {"maxTokens": self.max_tokens}}
         if tools:
             kw["toolConfig"] = to_tool_config(tools)
+        if self.cache:
+            if system:
+                kw["system"] = system + [{"cachePoint": {"type": "default"}}]
+            if tools:
+                kw["toolConfig"]["tools"].append({"cachePoint": {"type": "default"}})
+        return kw
+
+    def chat(self, messages, tools=None):
+        from botocore.exceptions import ClientError, ParamValidationError
         last = None
         for model in list(self.models):
             for attempt in range(4):
+                kw = self.request(messages, tools)
                 try:
+                    t0 = time.monotonic()
                     r = self.client(fresh=attempt > 0 and isinstance(last, ClientError) and _expired(last)).converse(
                         modelId=model, **kw)
                     self.calls += 1
-                    return from_converse(r), {"model": model, "usage": r.get("usage")}
+                    return from_converse(r), {"model": model, "usage": r.get("usage"),
+                                              "ms": int((time.monotonic() - t0) * 1000)}
+                except ParamValidationError as e:  # an older botocore that doesn't know cachePoint
+                    last = e
+                    if self.cache:
+                        self.cache = False
+                        continue
+                    raise
                 except ClientError as e:
                     last = e
                     code = e.response.get("Error", {}).get("Code", "")
+                    if self.cache and code == "ValidationException" and "cach" in str(e).lower():
+                        self.cache = False  # this model/region doesn't take prompt caching: carry on without it
+                        continue
                     if _expired(e):
                         if attempt >= 1:
                             raise RuntimeError("AWS credentials expired: open link.careem.com/htjordan, click A, and "
