@@ -83,6 +83,12 @@ class Brain:
         self.store, self.memory, self.layer, self.tools, self.llm = store, memory, layer, tools, llm
         self.history = {}  # short-term memory: this session's messages per user
         self.turns = {}  # messages per user, so "her next message" is about her, not anyone else's
+        self.live = {}  # user_id -> what the agent is doing right now, for the "عم بدوّر…" status on the voice page
+
+    def progress(self, user_id, key, **detail):
+        """Live status while a reply is being built (read by /api/progress). Never affects the answer."""
+        n = self.live.get(user_id, {}).get("n", 0) + 1
+        self.live[user_id] = {"key": key, "detail": detail, "n": n, "t": time.monotonic()}
 
     def family_text(self, u):
         return "; ".join(f"{f['name']} ({f['relation']}{', pays' if f.get('pays') else ''}"
@@ -147,6 +153,7 @@ class Brain:
         turn = self.turns[user_id] = self.turns.get(user_id, 0) + 1
         start = time.monotonic()
         steps = [{"step": "1 hear", "text": text}]
+        self.progress(user_id, "remember")
         self.memory.seed(user_id)
 
         t0 = time.monotonic()
@@ -170,6 +177,7 @@ class Brain:
         fresh = pending and isinstance(pending.get("turn"), int) and 0 < turn - pending["turn"] <= YES_WITHIN_MESSAGES \
             and now - parse_ts(pending["ts"]) <= YES_WITHIN_TIME
         if pending and pending.get("by") == self.store.users[user_id]["name"] and fresh and g.says_yes(text):
+            self.progress(user_id, "tool", name="place_order")
             # any kind of yes to the order waiting for the user: place it now (still through every guardrail);
             # the AI only tells them how it went, so it cannot forget to order or ask for yet another yes
             result = self.tools.run("place_order", {"confirmed_by": "user"},
@@ -189,7 +197,8 @@ class Brain:
         convo = [{"role": "system", "content": self.system(user_id, now, facts, advice) + self.setup_notes() + note}] + msgs[-12:]
         ctx = {"user_id": user_id, "now": now, "text": text, "turn": turn}
         reply = ""
-        for _ in range(MAX_TOOL_ROUNDS):
+        for round_no in range(MAX_TOOL_ROUNDS):
+            self.progress(user_id, "think", round=round_no)
             t0 = time.monotonic()
             msg, meta = self.llm.chat(convo, self.tools.schemas())
             calls = msg.tool_calls or []
@@ -205,6 +214,7 @@ class Brain:
                 t0 = time.monotonic()
                 try:
                     args = json.loads(c.function.arguments or "{}")
+                    self.progress(user_id, "tool", name=c.function.name, args=args if isinstance(args, dict) else {})
                     result = self.tools.run(c.function.name, args, ctx)
                 except json.JSONDecodeError:
                     args, result = None, {"error": "arguments were not valid JSON"}
@@ -214,6 +224,7 @@ class Brain:
         else:
             reply = "عذراً، صار في مشكلة. رح أحاول مرة ثانية." if self.store.users[user_id]["lang"] != "en" else "Sorry, something went wrong."
         msgs.append({"role": "assistant", "content": reply})
+        self.progress(user_id, "reply")
 
         ok, why = g.safe_to_remember(text)  # local check, instant
         if ok:  # the AgentCore / Mem0 write happens after the reply goes out, so the user doesn't wait for it

@@ -172,8 +172,58 @@ def family_page(user_id: str):
     return FileResponse(ROOT / "web" / "family.html")
 
 
-def spoken(reply):
+TOOL_STATUS = {  # what grandma sees while the agent works, in Jordanian Arabic
+    "user_info": "عم بجيب عنوانك…",
+    "is_grocery_area_serviceable": "عم بتأكد إنه كريم بيوصل لعندك…",
+    "search_groceries_get_top_user_items": "عم بشوف أغراضك المعتادة…",
+    "search_groceries_get_all_deals": "عم بدوّر على العروض…",
+    "create_grocery_cart_with_quantities": "عم بحط الأغراض بالسلة…",
+    "cart_get_quik_basket": "عم بشوف السلة…",
+    "cart_get_basket_price": "عم بحسب المجموع مع التوصيل…",
+    "cart_get_checkout_promos": "عم بدوّر على خصم…",
+    "request_confirmation": "تقريباً جاهز…",
+    "place_order": "عم بطلبلك هلق…",
+    "memory_list": "عم بتذكّر شو بعرف عنك…",
+    "memory_forget": "عم بمسح…",
+    "search_catalog": "عم بدوّر على الأغراض…", "usual_basket": "عم بشوف أغراضك المعتادة…",
+    "add_to_cart": "عم بحط الأغراض بالسلة…", "view_cart": "عم بشوف السلة…",
+}
+
+
+def status_text(p):
+    if not p:
+        return "لحظة…"
+    key, d = p["key"], p.get("detail", {})
+    if key == "remember":
+        return "عم بتذكّر شو بتحبي…"
+    if key == "think":
+        return "عم بفكّر…" if d.get("round", 0) == 0 else "شوي كمان…"
+    if key == "reply":
+        return "عم بكتبلك الرد…"
+    if key == "voice":
+        return "عم بجهّز الصوت…"
+    if key == "tool":
+        name, args = d.get("name", ""), d.get("args") or {}
+        if name == "search_groceries_items":
+            terms = args.get("search_terms") or []
+            terms = [terms] if isinstance(terms, str) else terms
+            return f"عم بدوّر على {'، '.join(map(str, terms[:4]))} بكريم…" if terms else "عم بدوّر على الأغراض بكريم…"
+        return TOOL_STATUS.get(name, "عم بشتغل على طلبك…")
+    return "لحظة…"
+
+
+@app.get("/api/progress/{user_id}")
+def progress(user_id: str):
+    """What the agent is doing right now (the voice page polls this while waiting for a reply)."""
+    check_user(user_id)
+    p = S["brain"].live.get(user_id)
+    return {"n": p["n"] if p else 0, "key": p["key"] if p else None, "text": status_text(p)}
+
+
+def spoken(reply, user_id=None):
     """Text-to-speech for a reply; never fails the request (the page falls back to the browser's voice)."""
+    if user_id and os.getenv("TTS_PROVIDER", "browser").lower() != "browser":
+        S["brain"].progress(user_id, "voice")
     try:
         out = voice.speak(reply)
     except Exception as e:  # e.g. Polly not allowed or offline
@@ -204,7 +254,7 @@ async def voice_message(request: Request, user_id: str, time: str | None = None)
     if not text:
         raise HTTPException(422, "I couldn't hear anything, please try again")
     out = S["brain"].handle(user_id, text[:1000], now_from(time))
-    audio_b64, mime = spoken(out["reply"])
+    audio_b64, mime = spoken(out["reply"], user_id)
     return {"transcript": text, "reply": out["reply"], "audio_b64": audio_b64, "audio_mime": mime,
             "waiting": family_view(user_id)}
 
@@ -222,7 +272,7 @@ def say(m: Say):
     if not m.text.strip():
         raise HTTPException(400, "empty message")
     out = S["brain"].handle(m.user_id, m.text.strip()[:1000], now_from(m.time))
-    audio_b64, mime = spoken(out["reply"])
+    audio_b64, mime = spoken(out["reply"], m.user_id)
     return {"transcript": m.text, "reply": out["reply"], "audio_b64": audio_b64, "audio_mime": mime,
             "waiting": family_view(m.user_id)}
 
