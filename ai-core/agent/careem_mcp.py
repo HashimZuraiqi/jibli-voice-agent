@@ -12,7 +12,8 @@ How it works:
   else CAREEM_LAT / CAREEM_LNG.
 - A basket whose total can't be read is never checked out on the user's own yes: the family member approves it.
 
-Settings (.env): CAREEM_PROVIDER=mcp, CAREEM_MCP_URL, CAREEM_MCP_TOKEN (sent as Bearer), CAREEM_MCP_TRANSPORT=http|sse.
+Settings (.env): CAREEM_PROVIDER=mcp (allow-listed tools) or mcp-all (every server tool except checkout; only on a
+local sandbox URL, production keeps the allow-list), CAREEM_MCP_URL, CAREEM_MCP_TOKEN (sent as Bearer), CAREEM_MCP_TRANSPORT=http|sse.
 Uses the MCP Python SDK 2.x (mcp.Client).
 - Local sandbox (fake Dubai data, never orders): CAREEM_MCP_URL=http://127.0.0.1:8787/mcp, no token.
 - Production (REAL account, REAL orders and money): CAREEM_MCP_URL=https://mcp.careemapis.com/mcp, token from
@@ -127,11 +128,17 @@ def norm_key(k):
 
 
 class CareemMCPTools:
-    def __init__(self, store, memory, local_tools, connector=None):
+    def __init__(self, store, memory, local_tools, connector=None, all_tools=False):
+        """all_tools: offer every server tool (except checkout) instead of the allow-list; local sandbox only."""
         self.store, self.memory, self.local = store, memory, local_tools
         self.mcp = connector or MCPConnector()
         allowed = {n.strip() for n in os.getenv("CAREEM_ALLOWED_TOOLS", DEFAULT_ALLOWED).split(",") if n.strip()}
         everything = {t["name"]: t for t in self.mcp.list_tools()}
+        if all_tools:
+            if is_local(self.mcp.url):
+                allowed = set(everything)
+            else:
+                print("[careem] mcp-all is only for the local sandbox; production keeps the allow-list")
         if CHECKOUT not in everything:
             raise RuntimeError(f"Careem MCP has no {CHECKOUT}; tools: {sorted(everything)}")
         self.checkout_tool = everything[CHECKOUT]
@@ -320,14 +327,26 @@ class CareemMCPTools:
         return {"status": "ordered", "order": order}
 
 
+def is_local(url):
+    """True for an in-process server (tests) or a localhost URL (the sandbox), never for production."""
+    if not isinstance(url, str):
+        return True
+    from urllib.parse import urlparse
+    return urlparse(url).hostname in ("127.0.0.1", "localhost", "::1")
+
+
 def make_tools(store, memory):
-    """CAREEM_PROVIDER=mock (default, local data) or mcp (real Careem). If MCP can't start, say so and use the mocks."""
+    """CAREEM_PROVIDER=mock (default, local data), mcp (real Careem, allow-listed tools) or mcp-all (every tool,
+    sandbox only). If MCP can't start, say so and use the mocks."""
     from .tools import Tools
     local = Tools(store, memory)
-    if os.getenv("CAREEM_PROVIDER", "mock").lower() != "mcp":
+    provider = os.getenv("CAREEM_PROVIDER", "mock").lower()
+    if provider not in ("mcp", "mcp-all"):
+        if provider != "mock":
+            print(f"[careem] unknown CAREEM_PROVIDER={provider!r}; using mock tools")
         return local
     try:
-        return CareemMCPTools(store, memory, local)
+        return CareemMCPTools(store, memory, local, all_tools=provider == "mcp-all")
     except Exception as e:
         print(f"[careem] MCP unavailable, using mock tools: {type(e).__name__}: {e}")
         return local

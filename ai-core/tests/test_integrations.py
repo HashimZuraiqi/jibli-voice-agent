@@ -121,3 +121,14 @@ def test_mem0_temperature_is_dropped_for_claude(provider, kept):
     UserMemory.drop_temperature(llm)
     assert ("temperature" in llm._build_inference_config()) is kept
     assert llm._build_inference_config()["maxTokens"] == 1024
+
+
+def test_mcp_all_offers_every_tool_on_the_sandbox_only(tmp_path):
+    srv, _ = fake_careem()
+    store = Store(tmp_path)
+    tools = CareemMCPTools(store, NoMemory(), Tools(store, NoMemory()), connector=MCPConnector(url=srv), all_tools=True)
+    names = [s["function"]["name"] for s in tools.schemas()]
+    assert "search_groceries_items" in names and CHECKOUT not in names       # checkout stays behind the gate
+    from agent.careem_mcp import is_local
+    assert is_local("http://127.0.0.1:8787/mcp") and is_local("http://localhost:8787/mcp")
+    assert not is_local("https://mcp.careemapis.com/mcp")
