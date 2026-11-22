@@ -16,7 +16,7 @@ from agent.llm import LLM, QuotaExceeded  # noqa: E402
 from agent.memory import make_memory  # noqa: E402
 from agent.personalization.layer import PersonalizationLayer  # noqa: E402
 from agent.store import STATE, Store  # noqa: E402
-from agent.tools import Tools  # noqa: E402
+from agent.careem_mcp import make_tools  # noqa: E402
 
 app = FastAPI(title="Voice agent: LLM brain + personalization")
 S = {}
@@ -27,7 +27,7 @@ def build():
     llm = LLM()
     memory = S.get("memory") or make_memory(STATE, llm.models)  # Mem0's Qdrant keeps a file lock, so reuse it
     layer = PersonalizationLayer(store)
-    S.update(store=store, memory=memory, layer=layer, brain=Brain(store, memory, layer, Tools(store, memory), llm))
+    S.update(store=store, memory=memory, layer=layer, brain=Brain(store, memory, layer, make_tools(store, memory), llm))
 
 
 build()
@@ -100,6 +100,7 @@ def state(user_id: str, time: str | None = None):
             "predictions": snap["predictions"][:8], "advice": snap["advice"], "cart": st.cart_view(user_id),
             "pending": st.state["pending"].get(user_id), "orders": st.orders(user_id)[-3:][::-1],
             "events": st.events(user_id)[-12:][::-1], "llm_calls": S["brain"].llm.calls,
+            "careem_provider": "Careem MCP" if hasattr(S["brain"].tools, "family_checkout") else "mock",
             "memory_provider": "AgentCore Memory" if type(S["memory"]).__name__ == "AgentCoreMemory" else "Mem0"}
 
 

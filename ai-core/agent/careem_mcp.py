@@ -1,0 +1,272 @@
+"""Real Careem tools through the Careem MCP server (CAREEM_PROVIDER=mcp). The mocks in tools.py stay the default/backup.
+
+How it works:
+- On start we ask the server for its tool list and hand those tools to the LLM as they are (names, descriptions and
+  argument schemas come from Careem), so we don't hard-code arguments we haven't seen.
+- `cart_grocery_checkout` is NEVER given to the LLM. Only our confirm gate calls it: place_order (the user's own yes
+  in a later message) or family_checkout (the family member's approve button). It is called once and never retried.
+- Its arguments are filled from values seen in earlier calls (cart id, lat/lng, address id, ...), so the LLM can't
+  invent them.
+
+Settings (.env): CAREEM_PROVIDER=mcp, CAREEM_MCP_URL, CAREEM_MCP_TOKEN (sent as Bearer), CAREEM_MCP_TRANSPORT=http|sse.
+"""
+import asyncio
+import hashlib
+import json
+import os
+import re
+
+from .personalization import guardrails as g
+
+CHECKOUT = "cart_grocery_checkout"
+PRICE = "cart_get_basket_price"
+TOTAL_KEYS = ("total", "total_price", "totalprice", "basket_total", "grand_total", "amount", "price")
+
+
+class MCPConnector:
+    """Minimal sync wrapper around the MCP Python SDK: one short connection per call (simple and robust for a demo)."""
+
+    def __init__(self, url=None, token=None, transport=None):
+        self.url = url or os.getenv("CAREEM_MCP_URL", "")
+        if not self.url:
+            raise RuntimeError("CAREEM_MCP_URL is not set")
+        token = token if token is not None else os.getenv("CAREEM_MCP_TOKEN", "")
+        self.headers = {"Authorization": f"Bearer {token}"} if token else {}
+        self.transport = (transport or os.getenv("CAREEM_MCP_TRANSPORT", "http")).lower()
+
+    async def _session(self, fn):
+        from mcp import ClientSession
+        if self.transport == "sse":
+            from mcp.client.sse import sse_client as client
+        else:
+            from mcp.client.streamable_http import streamablehttp_client as client
+        async with client(self.url, headers=self.headers) as streams:
+            async with ClientSession(streams[0], streams[1]) as s:
+                await s.initialize()
+                return await fn(s)
+
+    def list_tools(self):
+        async def go(s):
+            return [{"name": t.name, "description": t.description or "", "inputSchema": t.inputSchema or {"type": "object"}}
+                    for t in (await s.list_tools()).tools]
+        return asyncio.run(self._session(go))
+
+    def call(self, name, args):
+        async def go(s):
+            r = await s.call_tool(name, args)
+            if getattr(r, "structuredContent", None):
+                out = r.structuredContent
+            else:
+                text = "\n".join(c.text for c in r.content if getattr(c, "type", "") == "text")
+                try:
+                    out = json.loads(text)
+                except json.JSONDecodeError:
+                    out = {"text": text}
+            if getattr(r, "isError", False):
+                return {"error": out}
+            return out
+        return asyncio.run(self._session(go))
+
+
+def flatten(obj, out=None):
+    """Every scalar leaf by its key name (latest wins), e.g. {'cart': {'id': 7}} -> {'cart_id': 7, 'id': 7}."""
+    out = {} if out is None else out
+
+    def walk(o, parent=""):
+        if isinstance(o, dict):
+            for k, v in o.items():
+                if isinstance(v, (dict, list)):
+                    walk(v, k)
+                else:
+                    out[k] = v
+                    if parent:
+                        out[f"{parent}_{k}"] = v
+        elif isinstance(o, list) and o and isinstance(o[0], dict) and len(o) == 1:
+            walk(o[0], parent)
+    walk(obj)
+    return out
+
+
+def norm_key(k):
+    return re.sub(r"[^a-z0-9]", "", k.lower())
+
+
+class CareemMCPTools:
+    def __init__(self, store, memory, local_tools, connector=None):
+        self.store, self.memory, self.local = store, memory, local_tools
+        self.mcp = connector or MCPConnector()
+        self.remote = {t["name"]: t for t in self.mcp.list_tools()}
+        if CHECKOUT not in self.remote:
+            raise RuntimeError(f"Careem MCP has no {CHECKOUT}; tools: {sorted(self.remote)}")
+
+    # -- per-user MCP state (kept in the store so the web panel and restarts see it) --
+    def st(self, uid):
+        return self.store.state.setdefault("mcp", {}).setdefault(uid, {"seen": {}, "basket": None, "done": {}})
+
+    def schemas(self):
+        out = [{"type": "function", "function": {"name": n, "description": t["description"][:1000],
+                                                 "parameters": t["inputSchema"] or {"type": "object", "properties": {}}}}
+               for n, t in self.remote.items() if n != CHECKOUT]
+        S = {"type": "string"}
+        own = [("request_confirmation", "Ask for confirmation before ordering. Call cart_get_basket_price first. "
+                "by='user' to ask the user, or the family member's name.", {"by": S}, ["by"]),
+               ("place_order", "Place the order after the USER said yes to request_confirmation(by='user'). "
+                "Family members approve in their own app, never here.", {"confirmed_by": S}, ["confirmed_by"])]
+        own += [s for s in self.local.specs() if s[0] in ("memory_list", "memory_forget")]
+        return out + [{"type": "function", "function": {"name": n, "description": d,
+                                                        "parameters": {"type": "object", "properties": p, "required": r}}}
+                      for n, d, p, r in own]
+
+    def run(self, name, args, ctx):
+        uid = ctx["user_id"]
+        if name == CHECKOUT:
+            self.store.log(uid, "guardrail", ctx["now"], check="checkout", ok=False, reason="the LLM cannot check out")
+            return {"error": "BLOCKED: checkout only happens through request_confirmation and a human yes"}
+        if name in ("memory_list", "memory_forget"):
+            return self.local.run(name, args, ctx)
+        if name == "request_confirmation":
+            return self.request_confirmation(ctx, **args)
+        if name == "place_order":
+            return self.place_order(ctx, **args)
+        if name not in self.remote:
+            return {"error": f"unknown tool {name}"}
+        try:
+            result = self.mcp.call(name, args)
+        except Exception as e:
+            return {"error": f"Careem MCP call failed: {type(e).__name__}: {str(e)[:200]}"}
+        st = self.st(uid)
+        flatten(args, st["seen"])
+        if isinstance(result, dict) and "error" not in result:
+            flatten(result, st["seen"])
+        if name == PRICE and "error" not in result:
+            st["basket"] = result
+        elif "cart" in name and name != PRICE:  # any cart change needs a new price and a new confirmation
+            st["basket"] = None
+            self.store.state["pending"].pop(uid, None)
+        self.store.save()
+        return result
+
+    # -- confirm gate --
+    @staticmethod
+    def fingerprint(basket):
+        return hashlib.sha1(json.dumps(basket, sort_keys=True, default=str).encode()).hexdigest()[:12]
+
+    @staticmethod
+    def total(basket):
+        for k, v in flatten(basket).items():
+            if norm_key(k) in TOTAL_KEYS:
+                try:
+                    return float(str(v).replace("JOD", "").replace("JD", "").strip())
+                except ValueError:
+                    pass
+        return None
+
+    def request_confirmation(self, ctx, by):
+        uid = ctx["user_id"]
+        basket = self.st(uid)["basket"]
+        if not basket:
+            return {"error": "no priced cart yet: create the cart, then call cart_get_basket_price"}
+        name = self.store.users[uid]["name"]
+        by = name if by.lower() in ("user", "me", name.lower()) else by
+        if by not in g.allowed_confirmers(self.store, uid):
+            return {"error": f"{by} cannot confirm; allowed: {g.allowed_confirmers(self.store, uid)}"}
+        self.store.state["pending"][uid] = {"by": by, "ts": ctx["now"].isoformat(timespec="minutes"), "turn": ctx.get("turn"),
+                                            "basket": self.fingerprint(basket), "cart": basket}
+        self.store.log(uid, "confirmation_requested", ctx["now"], by=by)
+        self.store.save()
+        return {"status": "waiting", "by": by, "basket": basket,
+                "note": "ask the user to say yes to confirm" if by == name
+                else "tell the user it is waiting for confirmation; do not place the order yet"}
+
+    def check(self, uid, by, user_text=None, turn=None):
+        st, pending = self.st(uid), self.store.state["pending"].get(uid)
+        if not pending:
+            return False, "ask for confirmation first (request_confirmation), then wait for the answer"
+        if pending["by"] != by:
+            return False, f"confirmation was requested from {pending['by']}, not {by}"
+        if not st["basket"] or self.fingerprint(st["basket"]) != pending["basket"]:
+            return False, "the cart changed after confirmation was requested; ask again"
+        total = self.total(st["basket"])
+        if total is not None and total > g.SPEND_CAP_JOD:
+            return False, f"total {total} JOD is over the {g.SPEND_CAP_JOD} JOD cap"
+        if by == self.store.users[uid]["name"]:
+            if turn is not None and pending.get("turn") == turn:
+                return False, "the user must say yes in their next message"
+            if not g.says_yes(user_text):
+                return False, "the user has not clearly said yes in this message"
+        return True, "ok"
+
+    def place_order(self, ctx, confirmed_by):
+        uid, name = ctx["user_id"], self.store.users[ctx["user_id"]]["name"]
+        if confirmed_by.lower() in ("user", "me"):
+            confirmed_by = name
+        if confirmed_by != name:
+            self.store.log(uid, "guardrail", ctx["now"], check="place_order", ok=False, reason="family approval must come from the family app")
+            return {"error": f"BLOCKED by guardrail: {confirmed_by} must approve in their app; tell the user it is waiting for them"}
+        ok, reason = self.check(uid, name, ctx.get("text"), ctx.get("turn"))
+        self.store.log(uid, "guardrail", ctx["now"], check="place_order", ok=ok, reason=reason)
+        if not ok:
+            return {"error": "BLOCKED by guardrail: " + reason}
+        return self.checkout(uid, name, ctx["now"])
+
+    def family_checkout(self, uid, by, now):
+        """The family member pressed Approve in their app (Brain.family_decision)."""
+        ok, reason = self.check(uid, by)
+        self.store.log(uid, "guardrail", now, check="place_order", ok=ok, reason=reason)
+        if not ok:
+            return {"status": "blocked", "reason": reason}
+        return self.checkout(uid, by, now)
+
+    def checkout_args(self, uid):
+        schema = self.remote[CHECKOUT]["inputSchema"] or {}
+        seen = {norm_key(k): v for k, v in self.st(uid)["seen"].items()}
+        args, missing = {}, []
+        for prop in (schema.get("properties") or {}):
+            v = seen.get(norm_key(prop))
+            if v is not None:
+                args[prop] = v
+            elif prop in schema.get("required", []):
+                missing.append(prop)
+        return args, missing
+
+    def checkout(self, uid, by, now):
+        st = self.st(uid)
+        fp = self.fingerprint(st["basket"])
+        if fp in st["done"]:  # double tap / repeated yes: never order the same basket twice
+            return {"status": "ordered", "order": st["done"][fp], "note": "already ordered"}
+        if st.get("failed") == fp:  # it may have gone through on Careem's side: a human checks, then builds a new cart
+            return {"status": "error", "error": "checkout already failed for this cart; check the Careem app, then make a new cart"}
+        args, missing = self.checkout_args(uid)
+        if missing:
+            return {"status": "blocked", "error": f"checkout needs {missing}, not seen in earlier Careem calls"}
+        try:
+            result = self.mcp.call(CHECKOUT, args)
+        except Exception as e:  # never retry checkout blindly: it may have gone through
+            st["failed"] = fp
+            self.store.save()
+            self.store.log(uid, "careem_checkout_failed", now, by=by, error=str(e)[:200])
+            return {"status": "error", "error": "checkout failed and was NOT retried; check the Careem app before trying again"}
+        if isinstance(result, dict) and "error" in result:
+            st["failed"] = fp
+            self.store.log(uid, "careem_checkout_failed", now, by=by, error=str(result["error"])[:200])
+            return {"status": "error", "error": result["error"]}
+        order = {"confirmed_by": by, "ts": now.isoformat(timespec="minutes"), "careem": result,
+                 "total": self.total(st["basket"])}
+        st["done"][fp] = order
+        st["basket"] = None
+        self.store.state["pending"].pop(uid, None)
+        self.store.log(uid, "careem_order", now, by=by, total=order["total"])
+        return {"status": "ordered", "order": order}
+
+
+def make_tools(store, memory):
+    """CAREEM_PROVIDER=mock (default, local data) or mcp (real Careem). If MCP can't start, say so and use the mocks."""
+    from .tools import Tools
+    local = Tools(store, memory)
+    if os.getenv("CAREEM_PROVIDER", "mock").lower() != "mcp":
+        return local
+    try:
+        return CareemMCPTools(store, memory, local)
+    except Exception as e:
+        print(f"[careem] MCP unavailable, using mock tools: {type(e).__name__}: {e}")
+        return local

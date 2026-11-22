@@ -60,7 +60,9 @@ reorder gaps per item category (`data/catalog.json` `default_gap_days`).
 
 ```
 agent/llm.py            Bedrock Converse client (OpenRouter fallback), same OpenAI-style return shape
-agent/tools.py          mocked Careem tools (catalog, usual basket, cart, confirm, place order)
+agent/tools.py          mocked Careem tools (catalog, usual basket, cart, confirm, place order) = default/backup
+agent/careem_mcp.py     real Careem MCP (CAREEM_PROVIDER=mcp): server's tools passed to the LLM except
+                        cart_grocery_checkout, which only the confirm gate calls (once, never retried)
 agent/memory.py         make_memory(): AgentCore (default) or Mem0 backup + seed facts
 agent/agentcore_memory.py  AgentCore Memory backend
 scripts/                create_agentcore_memory.py (run once)
