@@ -83,7 +83,7 @@ def to_converse(messages):
                 body = [{"text": content or "(empty)"}]
             push("user", [{"toolResult": {"toolUseId": m["tool_call_id"], "content": body}}])
     if out and out[0]["role"] != "user":  # e.g. history starts with our proactive reminder
-        out.insert(0, {"role": "user", "content": [{"text": "(Sanad sent the user a voice note first.)"}]})
+        out.insert(0, {"role": "user", "content": [{"text": "(Jibli sent the user a voice note first.)"}]})
     if not out:
         out = [{"role": "user", "content": [{"text": "Go."}]}]
     return system, out
