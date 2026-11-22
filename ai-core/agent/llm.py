@@ -142,7 +142,7 @@ class BedrockLLM:
         return kw
 
     def chat(self, messages, tools=None):
-        from botocore.exceptions import ClientError, ParamValidationError
+        from botocore.exceptions import ClientError, NoCredentialsError, ParamValidationError
         last = None
         for model in list(self.models):
             for attempt in range(4):
@@ -154,6 +154,12 @@ class BedrockLLM:
                     self.calls += 1
                     return from_converse(r), {"model": model, "usage": r.get("usage"),
                                               "ms": int((time.monotonic() - t0) * 1000)}
+                except NoCredentialsError as e:  # .env has no AWS keys yet: reload it once, then say so on the page
+                    if attempt == 0:
+                        last = ClientError({"Error": {"Code": "ExpiredToken", "Message": str(e)}}, "Converse")
+                        continue
+                    raise RuntimeError("No AWS credentials: open link.careem.com/htjordan, click A, and paste "
+                                       "AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN into ai-core/.env") from e
                 except ParamValidationError as e:  # an older botocore that doesn't know cachePoint
                     last = e
                     if self.cache:
