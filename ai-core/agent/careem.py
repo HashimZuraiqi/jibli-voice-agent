@@ -11,6 +11,7 @@ import uuid
 
 from jsonschema import Draft202012Validator
 
+from .careem_mcp import CHECKOUT_OFF, checkout_allowed, is_production
 from .personalization import guardrails as g
 from .personalization.repurchase import predictions
 
@@ -97,6 +98,8 @@ class CareemTools:
     def __init__(self, store, memory, places, mcp=None):
         self.store, self.memory, self.places = store, memory, places
         self.mcp = mcp or CareemMCP()
+        # rides here are a local stand-in: never on the real Careem account, where it would fake a booking
+        self.rides = not is_production(self.mcp.conn.url)
 
     # ---------- what the LLM sees ----------
     def schemas(self):
@@ -108,6 +111,7 @@ class CareemTools:
             out.append({"type": "function", "function": {"name": name, "description": d.get("description", "")[:900],
                                                          "parameters": params}})
         S = {"type": "string"}
+        spending = [t for t in SPENDING if self.rides or t != "rides_request"]
         local = [
             ("rides_get_quote", "Price a Careem ride between two saved places (labels like Home, Work, Gym, Dubai Mall, Airport T3).",
              {"pickup": S, "dropoff": S, "product": {"type": "string", "enum": list(RIDE_PRODUCTS)}}, ["pickup", "dropoff"]),
@@ -116,7 +120,7 @@ class CareemTools:
              "Before anything is ordered or booked: propose the exact checkout call and ask the user (by='user') or the family "
              "member who confirms. checkout_tool is one of cart_grocery_checkout, cart_checkout, box_create_order, rides_request; "
              "checkout_args are its exact arguments (for rides_request: the quote_id from rides_get_quote); total is the price.",
-             {"by": S, "checkout_tool": {"type": "string", "enum": list(SPENDING)}, "checkout_args": {"type": "object"},
+             {"by": S, "checkout_tool": {"type": "string", "enum": spending}, "checkout_args": {"type": "object"},
               "total": {"type": "number"}, "currency": S, "summary": S},
              ["by", "checkout_tool", "checkout_args", "total", "summary"]),
             ("place_order", "Run the confirmed checkout after the USER said yes to request_confirmation(by='user'). "
@@ -126,7 +130,7 @@ class CareemTools:
         ]
         out += [{"type": "function", "function": {"name": n, "description": d,
                                                         "parameters": {"type": "object", "properties": p, "required": r}}}
-                for n, d, p, r in local]
+                for n, d, p, r in local if self.rides or n != "rides_get_quote"]
         out[-4]["function"]["description"] += " Arguments per checkout_tool: " + self.checkout_fields()
         return out
 
@@ -192,6 +196,8 @@ class CareemTools:
                           for p in predictions(self.store, ctx["user_id"], ctx["now"])]}
 
     def t_rides_get_quote(self, ctx, pickup, dropoff, product=None):
+        if not self.rides:
+            return {"error": "rides cannot be booked in this setup yet"}
         a, b = self.places.get(pickup), self.places.get(dropoff)
         if not a or not b:
             return {"error": f"unknown place; saved places: {list(self.places)}"}
@@ -210,7 +216,7 @@ class CareemTools:
         by = self.store.users[uid]["name"] if by.lower() in ("user", "me", self.store.users[uid]["name"].lower()) else by
         if by not in g.allowed_confirmers(self.store, uid):
             return {"error": f"{by} cannot confirm; allowed: {g.allowed_confirmers(self.store, uid)}"}
-        if checkout_tool not in SPENDING:
+        if checkout_tool not in SPENDING or (checkout_tool == "rides_request" and not self.rides):
             return {"error": f"checkout_tool must be one of {list(SPENDING)}"}
         problem = self._check_args(checkout_tool, checkout_args)
         if problem:
@@ -294,6 +300,9 @@ class CareemTools:
         prices = self.store.state.get("careem_prices", {}).get(uid, {})
         prices.pop("box", None) if p["tool"] == "box_create_order" else prices.pop("baskets", None)
         self.store.save()
+        if p["tool"] != "rides_request" and not checkout_allowed():  # real account: never pay
+            self.store.log(uid, "guardrail", now, check="checkout", ok=False, reason="checkout switched off")
+            return {"status": "blocked", "service": SPENDING[p["tool"]], "result": {"error": CHECKOUT_OFF}}
         try:
             result = self._ride(p) if p["tool"] == "rides_request" else self.mcp.call(p["tool"], p["args"])
         except Exception as e:

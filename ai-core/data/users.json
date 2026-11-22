@@ -58,5 +58,16 @@
   "confirm_by": "Omar",
   "usual_hour": 10,
   "price_sensitivity": 0.6
+ },
+ "lina": {
+  "name": "Lina",
+  "name_ar": "لينا",
+  "age": 22,
+  "lang": "mix",
+  "city": "Amman",
+  "family": [],
+  "confirm_by": "Lina",
+  "usual_hour": 19,
+  "price_sensitivity": 0.8
  }
 }

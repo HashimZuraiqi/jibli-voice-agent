@@ -189,3 +189,58 @@ def test_unknown_currency_fails_closed(tools):
     tools.store.state["pending"]["um_khaled"] = {"by": "Khaled", "tool": "box_create_order", "total": 1, "currency": "XYZ"}
     ok, reason = g.can_place_order(tools.store, "um_khaled", "Khaled")
     assert not ok and "unknown currency" in reason
+
+
+def test_checkout_switch_defaults(monkeypatch):
+    from agent.careem_mcp import checkout_allowed, is_production
+    monkeypatch.delenv("CAREEM_ALLOW_CHECKOUT", raising=False)
+    monkeypatch.setenv("CAREEM_MCP_URL", "https://mcp.careemapis.com/mcp")
+    assert is_production() and not checkout_allowed()          # real Careem: off unless switched on
+    monkeypatch.setenv("CAREEM_MCP_URL", "http://127.0.0.1:8787/mcp")
+    assert not is_production() and checkout_allowed()          # local sandbox: on
+    monkeypatch.setenv("CAREEM_ALLOW_CHECKOUT", "false")
+    assert not checkout_allowed()
+
+
+def test_checkout_off_builds_but_never_pays(tools, monkeypatch):
+    monkeypatch.setenv("CAREEM_ALLOW_CHECKOUT", "false")
+    tools.run("box_pre_checkout", BOX_QUOTE, ctx(1))
+    tools.run("request_confirmation", {"by": "Khaled", "checkout_tool": "box_create_order", "checkout_args": dict(BOX_ORDER),
+                                       "total": 52, "currency": "AED", "summary": "Box"}, ctx(1))
+    calls = []
+    real_call = tools.mcp.call
+    tools.mcp.call = lambda name, args: calls.append(name) or real_call(name, args)
+    r = tools.execute_pending("um_khaled", "Khaled", NOW)
+    assert r["status"] == "blocked" and "nothing was paid" in r["result"]["error"]
+    assert "box_create_order" not in calls and not tools.store.state["pending"]
+
+
+def test_users_yes_places_the_waiting_order_without_the_model(tools, monkeypatch):
+    from agent.brain import Brain
+
+    class NoLLM:
+        calls = 0
+
+        def chat(self, messages, tools=None):
+            from agent.llm import Message
+            return Message("done"), {"model": "test"}
+
+    class Layer:
+        def advise(self, user_id, now):
+            return {"running_out": [], "cold_start": False, "suggestions_for_new_user": [], "usual_ride": None,
+                    "usual_box": None, "style": "short", "style_hint": "", "style_scores": {}, "offer": None,
+                    "offer_decision": {}}
+
+    class Mem:
+        def seed(self, u): pass
+        def recall(self, u, t): return []
+        def learn(self, u, t): return True, "ok"
+
+    q = tools.run("rides_get_quote", {"pickup": "Home", "dropoff": "Work", "product": "Go"}, ctx(1))
+    price = q["quotes"][0]["price_aed"]
+    tools.run("request_confirmation", {"by": "user", "checkout_tool": "rides_request", "total": price, "currency": "AED",
+                                       "summary": "Go to work", "checkout_args": {"quote_id": q["quote_id"], "product": "Go"}}, ctx(0))
+    brain = Brain(tools.store, Mem(), Layer(), tools, NoLLM())
+    out = brain.handle("um_khaled", "yep, go ahead and book it please", NOW)
+    auto = [s for s in out["steps"] if s.get("tool") == "place_order"]
+    assert auto and auto[0]["result"]["status"] == "ordered" and not tools.store.state["pending"]

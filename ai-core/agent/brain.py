@@ -24,9 +24,10 @@ def sandbox_note():
 # how to confirm depends on the Careem path: careem.py (mcp-all) proposes the exact checkout; careem_mcp.py (mcp)
 # and the mocks only take who confirms, and the checkout is built from the priced basket by the gate
 CONFIRM_ALL = ("- Nothing is ordered or booked until it is confirmed: call request_confirmation with the exact checkout_tool, "
-               "checkout_args, total and a one-line summary, by the user or by the family member who usually confirms; then stop "
-               "and wait. Only call place_order when the user has just said yes. Never retry a failed checkout on your own; tell "
-               "the user what went wrong.")
+               "checkout_args, total and a one-line summary, then stop and wait. Ask the user herself (by='user') by default; "
+               "ask the family member who usually confirms only when the user asks for that or a tool says the family must "
+               "approve. The person an order is sent to (e.g. food sent to Khaled) is not the one who confirms it. When the user "
+               "says yes the system places the order. Never retry a failed checkout on your own; tell the user what went wrong.")
 CONFIRM_GROCERY = ("- Nothing is ordered until it is confirmed: get the basket price first, then call request_confirmation and stop "
                    "and wait. Ask the user herself (by='user') by default; ask the family member who usually confirms only when the "
                    "user asks for that or a tool says the family must approve. Only call place_order when the user has just said "
@@ -77,7 +78,7 @@ class Brain:
                       if advice["cold_start"] else "",
                       style=advice["style"], style_hint=advice["style_hint"], offer=offer,
                       orders=self.orders_text(user_id),
-                      confirm_rules=CONFIRM_ALL if hasattr(self.tools, "execute_pending") else CONFIRM_GROCERY, ride=ride_text(advice.get("usual_ride")),
+                      confirm_rules=CONFIRM_ALL if hasattr(self.tools, "execute_pending") else CONFIRM_GROCERY, ride=ride_text(advice.get("usual_ride")) if getattr(self.tools, "rides", True) else "rides are not available yet",
                       box=box_text(advice.get("usual_box")), places=self.places_text()) + sandbox_note()
 
     def places_text(self):
@@ -99,6 +100,17 @@ class Brain:
             lines.append(f"- placed {o['ts'].replace('T', ' ')}, approved by {o['confirmed_by']}: {names} ({o['total']} JOD)")
         return "\n".join(lines) or "- none"
 
+    def setup_notes(self):
+        """What this setup cannot do, so the model says so instead of promising it."""
+        from .careem_mcp import checkout_allowed
+        notes = []
+        if hasattr(self.tools, "mcp") and not checkout_allowed():
+            notes.append("Checkout is switched off: after a confirmation the order is NOT paid; tell the user the cart "
+                         "and price are ready and the order can be finished in the Careem app.")
+        if getattr(self.tools, "rides", True) is False:
+            notes.append("Rides cannot be booked in this setup yet; if asked, say so kindly.")
+        return ("\n" + "\n".join(notes)) if notes else ""
+
     def handle(self, user_id, text, now):
         self.turn += 1
         steps = [{"step": "1 hear", "text": text}]
@@ -118,13 +130,26 @@ class Brain:
                 if reply == "yes":
                     note = ("\nThe user just said yes to your reminder. Prepare what it offered (" + self.reminder_items(advice)
                             + "): build the cart or quote with the tools, get its price, then request_confirmation from the "
-                            "family member who usually confirms.")
+                            "user herself (by='user').")
+        pending = self.store.state["pending"].get(user_id)
+        if pending and pending.get("by") == self.store.users[user_id]["name"] and pending.get("turn") != self.turn \
+                and g.says_yes(text):
+            # any kind of yes to the order waiting for the user: place it now (still through every guardrail);
+            # the AI only tells them how it went, so it cannot forget to order or ask for yet another yes
+            result = self.tools.run("place_order", {"confirmed_by": "user"},
+                                    {"user_id": user_id, "now": now, "text": text, "turn": self.turn})
+            steps.append({"step": "6 confirm", "tool": "place_order", "args": {"confirmed_by": "user", "auto": True},
+                          "result": result})
+            note += ("\nThe user just said yes, so the system already placed the order. Result: "
+                     + json.dumps(result, ensure_ascii=False, default=str)[:1500]
+                     + "\nTell them the outcome in one or two sentences. Do not ask for confirmation again and do not "
+                       "call request_confirmation or place_order for it.")
         steps.append({"step": "3 advise", "running_out": [p["item_id"] for p in advice["running_out"]],
                       "style": advice["style"], "offer": advice["offer"], "offer_decision": advice["offer_decision"]})
 
         msgs = self.history.setdefault(user_id, [])
         msgs.append({"role": "user", "content": text})
-        convo = [{"role": "system", "content": self.system(user_id, now, facts, advice) + note}] + msgs[-12:]
+        convo = [{"role": "system", "content": self.system(user_id, now, facts, advice) + self.setup_notes() + note}] + msgs[-12:]
         ctx = {"user_id": user_id, "now": now, "text": text, "turn": self.turn}
         reply = ""
         for _ in range(MAX_TOOL_ROUNDS):
@@ -167,7 +192,8 @@ class Brain:
         offer = (f"{advice['offer']['discount_pct']}% off if they order now (max {advice['offer']['max_jod']} JOD)"
                  if advice["offer"] and advice["running_out"] else "none, do not mention discounts")
         lang = "Jordanian Arabic dialect" if u["lang"] == "ar" else "Jordanian Arabic with a few English words"
-        text = prompt("reminder", name=f"{u['name']} ({u['name_ar']})", items=self.reminder_items(advice),
+        shown = advice if getattr(self.tools, "rides", True) else dict(advice, usual_ride=None)
+        text = prompt("reminder", name=f"{u['name']} ({u['name_ar']})", items=self.reminder_items(shown),
                       style=advice["style"], style_hint=advice["style_hint"], offer=offer,
                       confirmer=u["confirm_by"], lang_rule=lang)
         msg, meta = self.llm.chat([{"role": "system", "content": text}])

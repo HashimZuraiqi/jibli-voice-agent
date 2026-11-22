@@ -9,36 +9,54 @@ SPEND_CAPS = {"JOD": 50.0, "AED": 259.0}  # per order, about 50 JOD each (team d
 SPEND_CAP_JOD = SPEND_CAPS["JOD"]  # careem_mcp.py converts the basket currency to JOD and checks this
 QUIET_HOURS = (22, 8)  # no reminders from 22:00 to 08:00
 OFFER_EVERY_DAYS = 7
-YES_WORDS = {"yes", "yeah", "ok", "okay", "sure", "confirm", "نعم", "اه", "ايوا", "ايوه", "تمام",
-             "اطلب", "اطلبه", "اطلبها", "ماشي", "يلا", "موافق", "موافقه", "اكيد"}
-YES_PHRASES = (("order", "it"), ("go", "ahead"))
-# filler that may surround a yes; anything else makes consent unclear and the agent asks again
-FILLER = {"please", "thanks", "thank", "you", "habibi", "يا", "ابني", "بنتي", "حبيبي", "حبيبتي", "يسلمو", "يسلموا", "ريت",
-          "شكرا", "الله", "يخليك", "يعطيك", "العافيه", "والله", "هلا", "طيب", "خلص", "اطلبلي", "هيك", "it", "go", "ahead", "order"}
+YES_WORDS = {"yes", "yeah", "yep", "yup", "ya", "ok", "okay", "okey", "k", "sure", "confirm", "confirmed", "alright",
+             "fine", "absolutely", "definitely", "ofc", "yalla",
+             "نعم", "اه", "ايوا", "ايوه", "ايه", "يس", "تمام", "ماشي", "يلا", "موافق", "موافقه", "اكيد", "طبعا", "حاضر",
+             "اوكي", "اوك", "خلص", "زبط", "مزبوط", "صح", "منيح", "عال", "اطلب", "اطلبه", "اطلبها", "اطلبلي", "اطلبيه",
+             "اطلبوا", "ابعت", "ابعته", "ابعتها", "ابعتلي", "بعته", "بعتها", "اكد", "اكده", "اكدها"}
+YES_PHRASES = (("order", "it"), ("go", "ahead"), ("do", "it"), ("of", "course"), ("sounds", "good"), ("please", "do"),
+               ("send", "it"), ("why", "not"))
+# "no problem" style phrases say yes even though they hold a negation word
+NO_PROBLEM = (("ما", "في", "مشكله"), ("مافي", "مشكله"), ("مش", "مشكله"), ("ولا", "يهمك"), ("no", "problem"),
+              ("not", "a", "problem"))
 NO_WORDS = {"no", "not", "nope", "nah", "never", "dont", "don't", "cancel", "later", "stop", "wait", "hold",
             "لا", "لاء", "مش", "مو", "ما", "بلاش", "بعدين", "الغي", "الغاء", "وقف", "استنى", "مابدي"}
+# "yes, but change something" is not a yes to the order as it stands: ask again
+CONDITIONS = {"but", "except", "change", "remove", "instead", "بس", "غير", "شيل", "شيلي", "بدل", "غيرها", "غيره"}
 
 
 def tokens(text):
     """One normalization for both checks: no diacritics, one alef/hamza form, punctuation (incl. ، ؛ ؟) dropped."""
     t = re.sub(r"[\u064B-\u0652\u0640]", "", (text or "").lower())
-    t = re.sub(r"[أإآ]", "ا", t).replace("ى", "ي").replace("لأ", "لا")
+    t = re.sub(r"[أإآ]", "ا", t).replace("ى", "ي").replace("ة", "ه").replace("لأ", "لا")
     return re.findall(r"[a-z']+|[\u0621-\u064A]+|\d+", t)
 
 
+def _drop_phrases(toks, phrases):
+    out, i = [], 0
+    while i < len(toks):
+        hit = next((p for p in phrases if tuple(toks[i:i + len(p)]) == p), None)
+        if hit:
+            out.append("<yes>")
+            i += len(hit)
+        else:
+            out.append(toks[i])
+            i += 1
+    return out
+
+
 def says_no(text):
-    return any(w in NO_WORDS for w in tokens(text))
+    return any(w in NO_WORDS for w in _drop_phrases(tokens(text), NO_PROBLEM))
 
 
 def says_yes(text):
-    """Fail closed: a short reply (at most 6 words), no negation, at least one yes word, and nothing but yes words
-    and filler. Anything else is unclear, and the agent asks a clear yes/no question again."""
-    toks = tokens(text)
-    if not 0 < len(toks) <= 6 or any(w in NO_WORDS for w in toks):
+    """Any kind of yes, in any length: a yes word or phrase ("اه والله اطلبه", "sure, go ahead", "ما في مشكلة"),
+    unless the message also says no / wait, or asks to change something first ("اه بس شيل الرز")."""
+    toks = _drop_phrases(tokens(text), NO_PROBLEM)
+    if not toks or any(w in NO_WORDS or w in CONDITIONS for w in toks):
         return False
     pairs = set(zip(toks, toks[1:]))
-    has_yes = any(w in YES_WORDS for w in toks) or any(p in pairs for p in YES_PHRASES)
-    return has_yes and all(w in YES_WORDS or w in FILLER for w in toks)
+    return "<yes>" in toks or any(w in YES_WORDS for w in toks) or any(p in pairs for p in YES_PHRASES)
 
 
 # sensitive details are never stored unless the user chose to share them for ordering
