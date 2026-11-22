@@ -26,6 +26,7 @@ Env: LEVA_SPEAKER (one of the 10 built-in speakers, default Badr), LEVA_DEVICE (
 import io
 import json
 import os
+import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -37,6 +38,10 @@ print(f"Loading Leva-TTS (speakers: {', '.join(SPEAKERS)}) ...", flush=True)
 t = time.time()
 TTS = LevaTTS(device=os.getenv("LEVA_DEVICE") or None, preprocess_text=True, verbose=False)
 TTS.synthesize("هلا", speaker=SPEAKER)  # warm-up, so the first real reply isn't the slow one
+# ONE generation at a time: the XTTS model is not thread-safe. Concurrent requests (the demo app pre-generates the
+# reminder while replies are spoken) mixed their tensors ("size of tensor a (85) must match ... (70)") and once caused
+# a CUDA device-side assert, after which every request failed while GET / still looked healthy.
+GPU_LOCK = threading.Lock()
 print(f"Ready in {time.time() - t:.0f} s on http://127.0.0.1:{os.getenv('LEVA_PORT', '8790')}  (speaker {SPEAKER})", flush=True)
 
 
@@ -51,8 +56,17 @@ class Handler(BaseHTTPRequestHandler):
         if speaker not in SPEAKERS:
             return self.send_error(400, f"speaker must be one of {list(SPEAKERS)}")
         t = time.time()
-        wav, sr = TTS.synthesize(text[:600], speaker=speaker, temperature=float(os.getenv("LEVA_TEMPERATURE", "0.65")),
-                                 speed=float(os.getenv("LEVA_SPEED", "1.0")))
+        try:
+            with GPU_LOCK:
+                wav, sr = TTS.synthesize(text[:600], speaker=speaker, temperature=float(os.getenv("LEVA_TEMPERATURE", "0.65")),
+                                         speed=float(os.getenv("LEVA_SPEED", "1.0")))
+        except Exception as e:  # answer instead of dropping the connection; the voice page falls back to the browser voice
+            print(f"synthesize failed ({len(text)} chars): {type(e).__name__}: {e}", flush=True)
+            self.send_error(500, f"{type(e).__name__}: {str(e)[:200]}")
+            if "CUDA error" in str(e):  # the GPU context is broken for good: exit, so it's obvious and gets restarted
+                print("CUDA error: the GPU state can't be recovered in this process, exiting. Start leva_server.py again.", flush=True)
+                os._exit(1)
+            return
         buf = io.BytesIO()
         sf.write(buf, wav, sr, format="WAV")
         data = buf.getvalue()
