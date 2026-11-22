@@ -29,7 +29,7 @@ class ReminderBandit:
             self.mab = pickle.loads(self.path.read_bytes())
         else:
             # cold start: the prior comes from logged replies of similar users (offline training, Li et al. 2010)
-            logs = json.loads((DATA / "bandit_logs.json").read_text())
+            logs = json.loads((DATA / "bandit_logs.json").read_text(encoding="utf-8"))
             self.mab = MAB(arms=list(STYLES), learning_policy=LearningPolicy.LinUCB(alpha=0.5), seed=7)
             self.mab.fit(decisions=[r["style"] for r in logs], rewards=[r["reward"] for r in logs],
                          contexts=[r["context"] for r in logs])

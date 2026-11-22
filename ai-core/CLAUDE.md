@@ -16,8 +16,13 @@ Careem's services are mocked with local JSON data.
 - LLM: **Claude on Amazon Bedrock** (Converse API via `boto3`, `global.anthropic.claude-sonnet-5-5`, us-east-1).
   Credentials come from the environment / default chain, never code; the event's expire hourly, so paste new ones
   into `.env` and the next call reloads them. Fallback: `LLM_PROVIDER=openrouter` (free tier, 50 requests/day).
-- Memory: **Mem0** (`mem0ai`), LLM = Bedrock Haiku (or OpenRouter), embedder = **FastEmbed** local multilingual
-  (`paraphrase-multilingual-MiniLM-L12-v2`, 384 dims), vector store = local Qdrant in `state/`.
+- Memory: **Amazon Bedrock AgentCore Memory** (default, `agent/agentcore_memory.py`, `MEMORY_PROVIDER=agentcore`):
+  actorId = user_id; user messages -> `create_event`, AgentCore's semantic + user-preference strategies extract facts
+  into `/users/{actorId}/facts/` and `/users/{actorId}/preferences/`; seed facts via `batch_create_memory_records`;
+  recall = `retrieve_memory_records`, list = `list_memory_records`, forget = `delete_memory_record`.
+  Create the resource once with `scripts/create_agentcore_memory.py` -> `AGENTCORE_MEMORY_ID` in `.env`.
+- Memory backup: **Mem0** (`MEMORY_PROVIDER=mem0`, `mem0ai`), LLM = Bedrock Haiku (or OpenRouter), embedder = **FastEmbed** local multilingual
+  (`paraphrase-multilingual-MiniLM-L12-v2`, 384 dims), vector store = local Qdrant in `state/`. Imported only when chosen.
 - Bandit: **MABWiser** LinUCB. Uplift: **CausalML** `BaseTClassifier` (control group named `"control"`).
 - Web: FastAPI + one static HTML page.
 - Mem0 v2 API: `add(..., user_id=...)` but `search(q, filters={"user_id": ...}, top_k=...)` and
@@ -26,7 +31,7 @@ Careem's services are mocked with local JSON data.
 ## The brain: 7 steps per user message (`agent/brain.py`)
 
 1. **Hear** — receive the transcribed text (Jordanian Arabic, English or a mix).
-2. **Remember** — Mem0 search for facts relevant to the message + the user profile (family, payer, usual basket).
+2. **Remember** — AgentCore Memory search for facts relevant to the message + the user profile (family, payer, usual basket).
 3. **Advise** — the personalization layer returns advice: items running out, whether an offer is worth giving, which style to speak in.
 4. **Think** — the LLM reads message + memory + advice and plans (OpenAI-style tool calling).
 5. **Act** — tool calls on the mocked Careem services: search catalog, usual basket, cart.
@@ -55,8 +60,14 @@ reorder gaps per item category (`data/catalog.json` `default_gap_days`).
 
 ```
 agent/llm.py            Bedrock Converse client (OpenRouter fallback), same OpenAI-style return shape
-agent/tools.py          mocked Careem tools (catalog, usual basket, cart, confirm, place order)
-agent/memory.py         Mem0 wrapper + sensitive-data filter
+agent/tools.py          mocked Careem tools (catalog, usual basket, cart, confirm, place order) = default/backup
+agent/careem_mcp.py     real Careem MCP (CAREEM_PROVIDER=mcp): only an allow-list of grocery/read tools reaches the
+                        LLM; cart_grocery_checkout only via the confirm gate (total_price from the confirmed basket,
+                        once, never retried). Sandbox http://127.0.0.1:8787/mcp (fake Dubai data, no token);
+                        production https://mcp.careemapis.com/mcp = REAL account, orders, money
+agent/memory.py         make_memory(): AgentCore (default) or Mem0 backup + seed facts
+agent/agentcore_memory.py  AgentCore Memory backend
+scripts/                create_agentcore_memory.py (run once), careem_login.py (production OAuth token)
 agent/personalization/  repurchase, bandit, uplift, guardrails, layer
 agent/brain.py          the 7-step loop
 data/                   generate.py → catalog, users, orders, synthetic bandit + uplift logs
