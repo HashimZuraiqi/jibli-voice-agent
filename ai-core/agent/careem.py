@@ -3,6 +3,7 @@
 The LLM sees Careem's real tool definitions, except the three that spend money. To pay, it proposes the exact
 checkout call with request_confirmation; this code runs it only after the user's clear yes or the family's approval.
 """
+import datetime as dt
 import json
 import math
 import os
@@ -32,6 +33,10 @@ CHANGES_ORDER = {"create_grocery_cart_with_quantities": {"groceries", "food"}, "
                  "cart_delete_items": {"groceries", "food"}, "cart_delete_basket": {"groceries", "food"},
                  "cart_reorder": {"groceries", "food"}, "box_pre_checkout": {"box"}, "rides_get_quote": {"ride"}}
 
+# a Box checkout must match its quote on all of these; quotes older than this are priced again
+BOX_BINDING = ("cct_id", "pickup_location_id", "dropoff_location_id", "pickup_latitude", "pickup_longitude")
+QUOTE_MAX_AGE = dt.timedelta(minutes=30)
+
 # rides are not in Careem's public MCP sandbox yet: a small local stand-in with the same confirm-then-pay flow
 RIDE_PRODUCTS = {"Go": (8.0, 1.9), "Comfort": (11.0, 2.4), "Business": (25.0, 4.1)}  # base AED, AED per km
 
@@ -57,6 +62,14 @@ def _km(a, b):
     la1, lo1, la2, lo2 = map(math.radians, (a["latitude"], a["longitude"], b["latitude"], b["longitude"]))
     h = math.sin((la2 - la1) / 2) ** 2 + math.cos(la1) * math.cos(la2) * math.sin((lo2 - lo1) / 2) ** 2
     return 2 * 6371 * math.asin(math.sqrt(h))
+
+
+def _positive(x):
+    """A real, finite price above zero (NaN, inf, negatives and text fail closed)."""
+    try:
+        return math.isfinite(float(x)) and float(x) > 0
+    except (TypeError, ValueError):
+        return False
 
 
 def _find(obj, keys):
@@ -152,18 +165,25 @@ class CareemTools:
 
     def _remember_prices(self, uid, name, args, result):
         """Keep what Careem said things cost, so the spend cap never depends on a number the LLM typed."""
-        if not isinstance(result, dict) or result.get("error"):
-            return
         prices = self.store.state.setdefault("careem_prices", {}).setdefault(uid, {})
+        if CHANGES_ORDER.get(name, set()) & {"groceries", "food"}:
+            prices.pop("baskets", None)  # a changed cart must be priced again
+        if not isinstance(result, dict) or result.get("error"):
+            self.store.save()
+            return
         if name == "box_pre_checkout" and isinstance(result.get("delivery_estimate"), dict):
             est = result["delivery_estimate"]
-            prices["box"] = {"cct_id": result.get("cct_id", args.get("cct_id")), "max_price": est.get("max_price"),
+            prices["box"] = {"ts": dt.datetime.now().isoformat(timespec="seconds"), "max_price": est.get("max_price"),
                              "currency": est.get("currency_code"),
-                             "pickup_location_id": result.get("pickup_location_id"),
-                             "dropoff_location_id": result.get("dropoff_location_id")}
-        currency = _find(result, ("currency_code", "currency"))
-        if name.startswith(("cart_", "create_grocery")) and isinstance(currency, str):
-            prices["cart_currency"] = currency
+                             **{k: result.get(k, args.get(k)) for k in BOX_BINDING}}
+        found = _find(result, ("currency_code", "currency"))
+        if name.startswith(("cart_", "create_grocery")) and isinstance(found, str):
+            prices["cart_currency"] = found  # Careem's cart answers name the currency; the price answer may not
+        if name == "cart_get_basket_price":
+            basket, price = result.get("basket") or {}, (result.get("price") or {}).get("price") or {}
+            currency = found if isinstance(found, str) else prices.get("cart_currency")
+            if basket.get("id") is not None and isinstance(price.get("total"), (int, float)) and isinstance(currency, str):
+                prices.setdefault("baskets", {})[str(basket["id"])] = {"total": float(price["total"]), "currency": currency.upper()}
         self.store.save()
 
     # ---------- local tools ----------
@@ -198,7 +218,8 @@ class CareemTools:
         real_total, real_currency, problem = self._real_price(uid, checkout_tool, checkout_args)
         if problem:
             return {"error": problem}
-        if abs(float(total) - real_total) > 0.5 or (currency or "").upper() != real_currency:
+        if not (_positive(total) and _positive(real_total)) or abs(float(total) - real_total) > 0.5 \
+                or (currency or "").upper() != real_currency:
             return {"error": f"the price is {real_total} {real_currency} according to Careem, not {total} {currency}; "
                              "tell the user the real price"}
         summary = f"{SPENDING[checkout_tool]}, {real_total} {real_currency}: {summary}"
@@ -211,23 +232,27 @@ class CareemTools:
                 if by != self.store.users[uid]["name"] else "ask the user to say yes to confirm"}
 
     def _real_price(self, uid, tool, args):
-        """(total, currency, problem) from Careem's own answers: the ride quote, the Box quote, or the total_price
-        the cart checkout will charge (Careem rejects it if it no longer matches the basket)."""
+        """(total, currency, problem) from Careem's own answers, tied to this exact checkout: the ride quote, the
+        Box quote for the same delivery, or the priced basket with this basket_id. Anything missing fails closed."""
         prices = self.store.state.get("careem_prices", {}).get(uid, {})
         if tool == "rides_request":
             q = self.store.state["ride_quotes"][args["quote_id"]]
             return next(x["price_aed"] for x in q["quotes"] if x["product"] == args["product"]), "AED", None
         if tool == "box_create_order":
             box = prices.get("box")
-            same = box and all(str(box.get(k)) == str(args.get(k)) for k in ("cct_id", "pickup_location_id", "dropoff_location_id")
-                               if box.get(k) is not None)
-            if not same or box.get("max_price") is None:
+            if not box or any(box.get(k) is None or str(box[k]) != str(args.get(k)) for k in BOX_BINDING):
                 return None, None, "price this exact Box delivery with box_pre_checkout first"
-            return float(box["max_price"]), str(box.get("currency") or "").upper(), None
-        currency = prices.get("cart_currency")
-        if not currency:
-            return None, None, "price the cart first (cart_get_basket_price)"
-        return float(args["total_price"]), currency.upper(), None
+            if dt.datetime.now() - dt.datetime.fromisoformat(box["ts"]) > QUOTE_MAX_AGE:
+                return None, None, "the Box quote is too old; call box_pre_checkout again"
+            if not _positive(box.get("max_price")) or not box.get("currency"):
+                return None, None, "Careem gave no usable price for this Box delivery"
+            return float(box["max_price"]), str(box["currency"]).upper(), None
+        basket = prices.get("baskets", {}).get(str(args.get("basket_id")))
+        if not basket:
+            return None, None, "price this basket first (cart_get_basket_price), after the last cart change"
+        if not _positive(args.get("total_price")) or abs(float(args["total_price"]) - basket["total"]) > 0.01:
+            return None, None, f"total_price must be the basket's price from Careem: {basket['total']} {basket['currency']}"
+        return basket["total"], basket["currency"], None
 
     def _check_args(self, tool, args):
         if not isinstance(args, dict):
@@ -264,8 +289,10 @@ class CareemTools:
         return self.execute_pending(uid, confirmed_by, ctx["now"])
 
     def execute_pending(self, uid, confirmed_by, now):
-        """Run the confirmed checkout once. It is never retried blindly: the pending call is cleared either way."""
+        """Run the confirmed checkout once. It is never retried blindly: the pending call and its price are cleared."""
         p = self.store.state["pending"].pop(uid)
+        prices = self.store.state.get("careem_prices", {}).get(uid, {})
+        prices.pop("box", None) if p["tool"] == "box_create_order" else prices.pop("baskets", None)
         self.store.save()
         try:
             result = self._ride(p) if p["tool"] == "rides_request" else self.mcp.call(p["tool"], p["args"])

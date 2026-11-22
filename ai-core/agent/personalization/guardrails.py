@@ -1,5 +1,6 @@
 """Guardrails: checked before anything is said or done. Each check returns (ok, reason)."""
 import datetime as dt
+import math
 import re
 
 from ..store import parse_ts
@@ -81,7 +82,13 @@ def can_place_order(store, user_id, confirmed_by, user_text=None):
     if currency not in SPEND_CAPS:  # fail closed: an unknown currency has no cap we can check
         return False, f"unknown currency {currency!r}; a family member must confirm in the app"
     cap = SPEND_CAPS[currency]
-    if total > cap:
+    try:
+        bad_total = not (math.isfinite(float(total)) and 0 < float(total))
+    except (TypeError, ValueError):
+        bad_total = True
+    if bad_total:  # fail closed: NaN or a missing price must never pass the cap
+        return False, f"the total {total!r} is not a real price"
+    if not float(total) <= cap:
         return False, f"total {total} {currency} is over the {cap} {currency} cap; a family member must confirm in the app"
     if confirmed_by not in allowed_confirmers(store, user_id):
         return False, f"{confirmed_by} is not allowed to confirm orders for this user"

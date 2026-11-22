@@ -73,6 +73,7 @@ def test_grocery_order_with_users_own_yes(tools):
     cart = tools.run("create_grocery_cart_with_quantities", {"merchant_id": 40001, **HOME,
                      "items": [{"keyword": "milk", "catalog_item_id": "4000101", "quantity": 2}]}, ctx(1))
     assert "error" not in cart
+    tools.run("cart_get_basket_price", {"merchant_id": 40001, **HOME}, ctx(1))
     checkout = {"basket_id": 6000002, "total_price": 45.5, "payment_type": "cash", **HOME}
     r = tools.run("request_confirmation", {"by": "user", "checkout_tool": "cart_grocery_checkout", "checkout_args": checkout,
                                            "total": 45.5, "currency": "AED", "summary": "2x milk, eggs, sourdough"}, ctx(1))
@@ -86,6 +87,7 @@ def test_grocery_order_with_users_own_yes(tools):
 
 def test_changing_the_cart_cancels_the_confirmation(tools):
     tools.run("create_grocery_cart_with_quantities", CART, ctx(1))
+    tools.run("cart_get_basket_price", {"merchant_id": 40001, **HOME}, ctx(1))
     tools.run("request_confirmation", {"by": "user", "checkout_tool": "cart_grocery_checkout", "total": 45.5, "summary": "x", "currency": "AED",
                                        "checkout_args": {"basket_id": 6000002, "total_price": 45.5, **HOME}}, ctx(1))
     assert tools.store.state["pending"]["um_khaled"]
@@ -125,12 +127,20 @@ def test_ride_quote_and_booking(tools):
 
 
 def test_spend_cap_in_aed(tools):
-    tools.run("create_grocery_cart_with_quantities", CART, ctx(1))
-    tools.run("request_confirmation", {"by": "Khaled", "checkout_tool": "cart_grocery_checkout", "total": 200, "summary": "big",
-                                       "currency": "AED",
-                                       "checkout_args": {"basket_id": 6000002, "total_price": 200, **HOME}}, ctx(1))
+    tools.store.state["pending"]["um_khaled"] = {"by": "Khaled", "tool": "box_create_order", "total": 200.0, "currency": "AED"}
     ok, reason = g.can_place_order(tools.store, "um_khaled", "Khaled")
     assert not ok and "cap" in reason
+
+
+def test_nan_and_wrong_basket_totals_fail_closed(tools):
+    tools.run("create_grocery_cart_with_quantities", CART, ctx(1))
+    tools.run("cart_get_basket_price", {"merchant_id": 40001, **HOME}, ctx(1))
+    for bad in (float("nan"), 1.0, -45.5):
+        r = tools.run("request_confirmation", {"by": "user", "checkout_tool": "cart_grocery_checkout", "total": bad, "currency": "AED",
+                                               "summary": "x", "checkout_args": {"basket_id": 6000002, "total_price": bad, **HOME}}, ctx(2))
+        assert "error" in r and not tools.store.state["pending"]
+    tools.store.state["pending"]["um_khaled"] = {"by": "Khaled", "tool": "box_create_order", "total": float("nan"), "currency": "AED"}
+    assert not g.can_place_order(tools.store, "um_khaled", "Khaled")[0]
 
 
 def test_usual_ride_and_box_predictions():
@@ -172,7 +182,7 @@ def test_price_comes_from_careem_not_the_model(tools):
     assert "box_pre_checkout first" in r["error"]  # no quote for this delivery yet
     r = tools.run("request_confirmation", {"by": "user", "checkout_tool": "cart_grocery_checkout", "total": 45.5, "currency": "AED",
                                            "summary": "x", "checkout_args": {"basket_id": 6000002, "total_price": 45.5, **HOME}}, ctx(3))
-    assert "price the cart first" in r["error"]
+    assert "price this basket first" in r["error"]
 
 
 def test_unknown_currency_fails_closed(tools):
