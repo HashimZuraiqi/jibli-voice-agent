@@ -22,14 +22,14 @@
 @media (prefers-reduced-motion: reduce) { :root { --t:1ms; } .done-check path { stroke-dashoffset:0 !important; animation:none !important; } *, *::before, *::after { animation-duration:1ms !important; transition-duration:1ms !important; } }
 * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html, body { margin:0; height:100%; }
-body { font-family:var(--font); background:var(--page); color:var(--ink); display:flex; align-items:center; justify-content:center;
-       font-size:17px; line-height:1.45; }
+body { font-family:var(--font); background:var(--page); color:var(--ink); min-height:100vh; min-height:100dvh; display:grid; place-items:center;
+       font-size:17px; line-height:1.45; text-align:right; overflow:hidden; }
 button { font:inherit; color:inherit; }
 
 /* ---------- device frame (390x844), full screen on a real phone ---------- */
-.device { position:relative; width:390px; height:844px; border-radius:56px; background:var(--bg); overflow:hidden;
+.device { position:relative; width:390px; height:844px; border-radius:56px; zoom:var(--fit, 1); margin:auto; background:var(--bg); overflow:hidden;
           box-shadow:0 0 0 12px #111, 0 0 0 13px #333, 0 30px 80px rgba(0,0,0,.35); }
-@media (max-width:500px), (max-height:700px) { .device { width:100vw; height:100dvh; border-radius:0; box-shadow:none; } .island { display:none; } }
+@media (max-width:500px) { .device { width:100vw; height:100dvh; border-radius:0; box-shadow:none; zoom:1; } .island { display:none; } }
 .island { position:absolute; top:11px; left:50%; transform:translateX(-50%); width:122px; height:35px; background:#000; border-radius:20px; z-index:50; }
 .statusbar { position:absolute; top:0; inset-inline:0; height:50px; display:flex; justify-content:space-between; align-items:center;
              padding:4px 30px 0; font-size:15px; font-weight:600; z-index:40; direction:ltr; pointer-events:auto; }
@@ -130,7 +130,7 @@ button { font:inherit; color:inherit; }
 .basket .addr { font-size:16px; color:var(--muted); margin-top:6px; }
 .yn { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
 .yn .btn { font-size:26px; padding:16px 8px; } .yn small { display:block; font-size:14px; font-weight:500; opacity:.85; }
-.mic-dock { position:absolute; bottom:0; inset-inline:0; padding:12px 16px 26px; display:flex; flex-direction:column; align-items:center; gap:6px; z-index:20;
+.mic-dock { position:absolute; bottom:0; inset-inline:0; padding:12px 16px 26px; display:flex; flex-direction:column; align-items:center; gap:8px; z-index:20;
             background:linear-gradient(to top, var(--bg) 70%, transparent); }
 .status { font-size:19px; font-weight:700; color:var(--green-d); min-height:26px; text-align:center; }
 @media (prefers-color-scheme: dark) { .status { color:var(--green); } }
@@ -140,13 +140,21 @@ button { font:inherit; color:inherit; }
 .mic svg { width:42px; height:42px; } .mic:active { transform:scale(.94); }
 .mic.rec { background:var(--red); box-shadow:0 0 0 10px rgba(229,72,77,.18), 0 8px 20px rgba(0,0,0,.2); }
 .mic:disabled { opacity:.6; }
-canvas.wave { width:260px; height:44px; }
-.typed { display:flex; gap:8px; width:100%; }
+canvas.wave { width:260px; height:44px; transition:opacity .3s; } canvas.wave.idle { opacity:0; }
+.typed { display:flex; gap:8px; width:100%; margin-top:14px; }
 .typed input { flex:1; font:inherit; font-size:17px; padding:10px 14px; border-radius:14px; border:.5px solid var(--line); background:var(--card); color:var(--ink); }
 .typed button { border:0; border-radius:14px; background:var(--green); color:#fff; padding:0 14px; font-size:16px; cursor:pointer; }
 .dots { display:inline-flex; gap:4px; vertical-align:middle; } .dots i { width:7px; height:7px; border-radius:50%; background:currentColor; animation:blink 1.2s infinite; }
 .dots i:nth-child(2) { animation-delay:.2s; } .dots i:nth-child(3) { animation-delay:.4s; }
 @keyframes blink { 0%,80%,100% { opacity:.25; } 40% { opacity:1; } }
+
+.starter { text-align:center; margin:40px 8px 0; animation:pop var(--t) var(--spring); }
+.starter .big { font-size:46px; } .starter p { font-size:20px; margin:8px 0 16px; }
+.chips { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+.chip { border:0; background:var(--card); box-shadow:var(--shadow); border-radius:999px; padding:10px 16px; font-size:18px; cursor:pointer; }
+.chip:active { transform:scale(.96); }
+.offline { position:absolute; top:52px; inset-inline:12px; z-index:95; background:#b42318; color:#fff; border-radius:16px; padding:10px 14px; font-size:14px; line-height:1.5; display:none; }
+.offline a { color:#fff; font-weight:700; direction:ltr; unicode-bidi:isolate; }
 
 /* ---------- 4. "Why this?" sheet ---------- */
 .scrim { position:absolute; inset:0; background:rgba(0,0,0,.35); opacity:0; visibility:hidden; transition:opacity var(--t); z-index:60; }
@@ -291,6 +299,9 @@ canvas.wave { width:260px; height:44px; }
   <section class="screen" id="voice">
     <div class="nav"><div class="bar"><button class="back" data-back>‹ كريم</button><span class="small">جيبلي</span><button class="link" data-go="settings">⚙️</button></div>
       <h1 id="voice-hello">هلا 👋</h1><div class="en">Jibli · voice ordering</div></div>
+    <div class="starter" id="starter"><div class="big">🎙️</div><p>احكيلي شو بدك، أو جرّبي:<span class="en-sub" style="text-align:center">Say what you need, or try:</span></p>
+      <div class="chips"><button class="chip" data-say="ابعتلي خبز وحليب">«ابعتلي خبز وحليب»</button><button class="chip" data-say="زي كل مرة">«زي كل مرة»</button>
+      <button class="chip" data-say="شو بتعرف عني؟">«شو بتعرف عني؟»</button></div></div>
     <div class="log" id="log" aria-live="polite"></div>
     <div id="basket"></div>
     <div style="height:210px"></div>
@@ -371,10 +382,12 @@ canvas.wave { width:260px; height:44px; }
   </div>
 
   <div class="toast" id="toast"></div>
+  <div class="offline" id="offline">⚠️ الصفحة مش موصولة بتطبيق جيبلي، فما في بيانات. افتحيها من السيرفر:<br>
+    <a id="offline-url" href="#">http://127.0.0.1:8000/app/um_khaled</a><span class="en-sub" style="color:#fff">Not connected to the Jibli server: open the URL above (not VS Code Live Preview)</span></div>
 </div>
 
 <script>
-const USER = decodeURIComponent(location.pathname.split("/").filter(Boolean).pop());
+const USER = location.pathname.includes("/app/") ? decodeURIComponent(location.pathname.split("/").filter(Boolean).pop()) : "um_khaled";
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const AR = new Intl.NumberFormat("ar", {numberingSystem:"arab", maximumFractionDigits:2});
@@ -387,6 +400,11 @@ const getJ = async url => { const r = await fetch(url); const j = await r.json()
 const STYLE_AR = {gentle:"لطيف وحنون", practical:"عملي ومختصر", family:"بذكر العيلة", short:"قصير جداً"};
 let S = null, WHY = null, VIEW = null, SETTINGS = null, current = null, stack = [];
 
+// fit the phone in the window (keeps it centred and fully visible at any window size or browser zoom)
+function fit() { const k = Math.min(1, (innerHeight - 32) / 870, (innerWidth - 32) / 416);
+  document.documentElement.style.setProperty("--fit", innerWidth <= 500 ? 1 : Math.max(.5, k).toFixed(3)); }
+fit(); addEventListener("resize", fit);
+const zoomK = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--fit")) || 1;
 function toast(t) { const el = $("toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("on"), 2600); }
 
 // ---------------- data
@@ -428,16 +446,16 @@ document.querySelectorAll(".screen").forEach(sc => sc.addEventListener("scroll",
 // shared element: a card flies from one element's box to another box (FLIP)
 function fly(fromEl, toRect, color) {
   if (!fromEl || matchMedia("(prefers-reduced-motion: reduce)").matches) return Promise.resolve();
-  const dev = $("device").getBoundingClientRect(), r = fromEl.getBoundingClientRect();
+  const dev = $("device").getBoundingClientRect(), r = fromEl.getBoundingClientRect(), z = zoomK();
   const f = document.createElement("div"); f.className = "fly";
-  Object.assign(f.style, {left:`${r.left - dev.left}px`, top:`${r.top - dev.top}px`, width:`${r.width}px`, height:`${r.height}px`,
+  Object.assign(f.style, {left:`${(r.left - dev.left) / z}px`, top:`${(r.top - dev.top) / z}px`, width:`${r.width / z}px`, height:`${r.height / z}px`,
                           background:color || getComputedStyle(fromEl).backgroundColor || "var(--card)"});
   $("device").appendChild(f); void f.offsetWidth;
   Object.assign(f.style, {left:`${toRect.left}px`, top:`${toRect.top}px`, width:`${toRect.width}px`, height:`${toRect.height}px`,
                           borderRadius:toRect.radius || "24px", opacity: toRect.fade ? 0 : 1});
   return new Promise(res => setTimeout(() => { f.style.opacity = 0; setTimeout(() => f.remove(), 250); res(); }, 520));
 }
-const FULL = () => { const d = $("device").getBoundingClientRect(); return {left:0, top:0, width:d.width, height:d.height, radius:"0px"}; };
+const FULL = () => ({left:0, top:0, width:$("device").offsetWidth, height:$("device").offsetHeight, radius:"0px"});
 
 // ---------------- clocks
 function tick() {
@@ -474,7 +492,7 @@ async function speakLine(text) {
   try { const r = await (await post("/api/speak", {user_id:USER, text})).json(); play({reply:text, audio_b64:r.audio_b64, audio_mime:r.audio_mime}); }
   catch (e) { browserSay(text); }
 }
-function add(cls, text) { const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = text; $("log").appendChild(d);
+function add(cls, text) { $("starter").style.display = "none"; const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = text; $("log").appendChild(d);
   $("voice").scrollTo({top:1e6, behavior:"smooth"}); return d; }
 
 // mic dock (lives in the device so it stays put while the log scrolls)
@@ -490,7 +508,7 @@ let analyser = null, level = 0, waveMode = "idle";
 function speaking(on) { waveMode = on ? "speak" : (waveMode === "speak" ? "idle" : waveMode); }
 (function drawWave() {
   const c = $("wave"), x = c.getContext("2d"), w = c.width, h = c.height, n = 36, t = performance.now() / 1000;
-  x.clearRect(0, 0, w, h);
+  x.clearRect(0, 0, w, h); c.classList.toggle("idle", waveMode === "idle");
   let data = null;
   if (analyser && waveMode === "listen") { data = new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(data); }
   const green = getComputedStyle(document.documentElement).getPropertyValue("--green").trim() || "#00a651";
@@ -576,6 +594,7 @@ $("mic").onclick = async () => {
     rec.start(); waveMode = "listen"; $("mic").classList.add("rec"); $("status").textContent = "عم بسمعك… اضغطي لما تخلصي";
   } catch (e) { add("note err", "⚠️ ما قدرت أفتح المايك: " + e.message); }
 };
+$("starter").onclick = e => { const c = e.target.closest("[data-say]"); if (c && !busy) say(c.dataset.say); };
 $("typed").onsubmit = e => { e.preventDefault(); const t = $("text").value.trim(); if (!t || busy) return; $("text").value = ""; say(t); };
 
 // ---------------- 3. basket card (items, Careem price, address, نعم / لا, "Why this?")
@@ -845,6 +864,10 @@ const START = (location.hash || "#lock").slice(1);
 if (START === "why") { go("voice", {instant:true}); setTimeout(openWhy, 300); }
 else go(START in ENTER ? START : "lock", {instant:true});
 if ("speechSynthesis" in window) speechSynthesis.getVoices();
+// opened outside the Jibli server (e.g. VS Code Live Preview): say so instead of showing empty screens
+fetch("/api/voice-config").then(r => { if (!r.ok) throw 0; return r.json(); }).catch(() => {
+  const u = `http://127.0.0.1:8000/app/${location.pathname.includes("/app/") ? encodeURIComponent(USER) : "um_khaled"}`;
+  $("offline-url").textContent = u; $("offline-url").href = u; $("offline").style.display = "block"; });
 </script>
 </body>
 </html>
