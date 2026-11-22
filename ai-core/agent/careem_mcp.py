@@ -9,6 +9,9 @@ How it works:
   invent them.
 
 Settings (.env): CAREEM_PROVIDER=mcp, CAREEM_MCP_URL, CAREEM_MCP_TOKEN (sent as Bearer), CAREEM_MCP_TRANSPORT=http|sse.
+- Local sandbox (fake Dubai data, never orders): CAREEM_MCP_URL=http://127.0.0.1:8787/mcp, no token.
+- Production (REAL account, REAL orders and money): CAREEM_MCP_URL=https://mcp.careemapis.com/mcp, token from
+  scripts/careem_login.py (OAuth PKCE with the hackathon client id).
 """
 import asyncio
 import hashlib
@@ -20,7 +23,16 @@ from .personalization import guardrails as g
 
 CHECKOUT = "cart_grocery_checkout"
 PRICE = "cart_get_basket_price"
-TOTAL_KEYS = ("total", "total_price", "totalprice", "basket_total", "grand_total", "amount", "price")
+TOTAL_KEYS = ("total", "totalprice", "baskettotal", "grandtotal", "amount")
+# Only these Careem tools reach the LLM (grocery journey + read-only helpers). Everything else, including every
+# tool that spends money or books something (cart_checkout, cart_add_item, cart_reorder, box_create_order,
+# create_ride, cancel_ride, save_new_address, apply_promotion_code, ...), is never offered.
+# create_grocery_cart_with_quantities is the one mutating tool allowed: it only builds a basket, nothing is bought.
+DEFAULT_ALLOWED = ("user_info,get_activities,track_activity,is_grocery_area_serviceable,search_groceries_items,"
+                   "search_groceries_get_top_user_items,search_groceries_get_all_deals,"
+                   "create_grocery_cart_with_quantities,cart_get_quik_basket,cart_get_basket_price,cart_get_checkout_promos")
+# checkout argument -> keys from earlier answers that hold its value (normalized: lowercase, no _ or -)
+ALIASES = {"totalprice": ("totalprice", "total", "baskettotal", "grandtotal")}
 
 
 class MCPConnector:
@@ -30,9 +42,22 @@ class MCPConnector:
         self.url = url or os.getenv("CAREEM_MCP_URL", "")
         if not self.url:
             raise RuntimeError("CAREEM_MCP_URL is not set")
-        token = token if token is not None else os.getenv("CAREEM_MCP_TOKEN", "")
-        self.headers = {"Authorization": f"Bearer {token}"} if token else {}
+        self.token = token
         self.transport = (transport or os.getenv("CAREEM_MCP_TRANSPORT", "http")).lower()
+
+    @property
+    def headers(self):
+        """Re-read the token each call, so scripts/careem_login.py --refresh works without a restart."""
+        token = self.token
+        if token is None:
+            from pathlib import Path
+            env = Path(__file__).resolve().parents[1] / ".env"
+            if env.exists():
+                from dotenv import dotenv_values
+                token = dotenv_values(env).get("CAREEM_MCP_TOKEN") or os.getenv("CAREEM_MCP_TOKEN", "")
+            else:
+                token = os.getenv("CAREEM_MCP_TOKEN", "")
+        return {"Authorization": f"Bearer {token}"} if token else {}
 
     async def _session(self, fn):
         from mcp import ClientSession
@@ -95,9 +120,12 @@ class CareemMCPTools:
     def __init__(self, store, memory, local_tools, connector=None):
         self.store, self.memory, self.local = store, memory, local_tools
         self.mcp = connector or MCPConnector()
-        self.remote = {t["name"]: t for t in self.mcp.list_tools()}
-        if CHECKOUT not in self.remote:
-            raise RuntimeError(f"Careem MCP has no {CHECKOUT}; tools: {sorted(self.remote)}")
+        allowed = {n.strip() for n in os.getenv("CAREEM_ALLOWED_TOOLS", DEFAULT_ALLOWED).split(",") if n.strip()}
+        everything = {t["name"]: t for t in self.mcp.list_tools()}
+        if CHECKOUT not in everything:
+            raise RuntimeError(f"Careem MCP has no {CHECKOUT}; tools: {sorted(everything)}")
+        self.checkout_tool = everything[CHECKOUT]
+        self.remote = {n: t for n, t in everything.items() if n in allowed and n != CHECKOUT}
 
     # -- per-user MCP state (kept in the store so the web panel and restarts see it) --
     def st(self, uid):
@@ -106,7 +134,7 @@ class CareemMCPTools:
     def schemas(self):
         out = [{"type": "function", "function": {"name": n, "description": t["description"][:1000],
                                                  "parameters": t["inputSchema"] or {"type": "object", "properties": {}}}}
-               for n, t in self.remote.items() if n != CHECKOUT]
+               for n, t in self.remote.items()]
         S = {"type": "string"}
         own = [("request_confirmation", "Ask for confirmation before ordering. Call cart_get_basket_price first. "
                 "by='user' to ask the user, or the family member's name.", {"by": S}, ["by"]),
@@ -129,7 +157,7 @@ class CareemMCPTools:
         if name == "place_order":
             return self.place_order(ctx, **args)
         if name not in self.remote:
-            return {"error": f"unknown tool {name}"}
+            return {"error": f"tool {name} is not available to this agent"}
         try:
             result = self.mcp.call(name, args)
         except Exception as e:
@@ -218,11 +246,16 @@ class CareemMCPTools:
         return self.checkout(uid, by, now)
 
     def checkout_args(self, uid):
-        schema = self.remote[CHECKOUT]["inputSchema"] or {}
+        schema = self.checkout_tool["inputSchema"] or {}
         seen = {norm_key(k): v for k, v in self.st(uid)["seen"].items()}
+        basket = {norm_key(k): v for k, v in flatten(self.st(uid)["basket"] or {}).items()}
         args, missing = {}, []
         for prop in (schema.get("properties") or {}):
-            v = seen.get(norm_key(prop))
+            key = norm_key(prop)
+            # the price must come from the basket that was confirmed, never from an older answer
+            v = next((basket[a] for a in ALIASES.get(key, ()) if a in basket), None)
+            if v is None and key not in ALIASES:
+                v = seen.get(key)
             if v is not None:
                 args[prop] = v
             elif prop in schema.get("required", []):

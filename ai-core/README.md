@@ -33,7 +33,12 @@ Memory runs on Amazon Bedrock AgentCore Memory. Backup: `MEMORY_PROVIDER=mem0` i
 
 ## Real Careem MCP
 
-Set `CAREEM_PROVIDER=mcp`, `CAREEM_MCP_URL` and `CAREEM_MCP_TOKEN` in `.env` and restart. The agent uses Careem's own
+- **Sandbox (build + test, never orders):** build it once from https://builders.careem.com/sandbox/careem-mcp-sandbox.zip
+  (outside this repo), then `CAREEM_PROVIDER=mcp`, `CAREEM_MCP_URL=http://127.0.0.1:8787/mcp`, no token. Fake Dubai data, AED, stateless.
+- **Production (REAL Careem account, REAL orders and money):** `.venv/bin/python scripts/careem_login.py` signs in and
+  writes `CAREEM_MCP_URL` + `CAREEM_MCP_TOKEN`; `--refresh` renews the token. Then `CAREEM_PROVIDER=mcp`.
+
+Restart after switching. The agent uses Careem's own
 tool list; `cart_grocery_checkout` is hidden from the LLM and only runs after a human yes (once, never retried).
 If the MCP server can't be reached at start, the app prints why and uses the mock tools.
 

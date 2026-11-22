@@ -20,9 +20,11 @@ class FakeCareem:
             {"name": "search_groceries_items", "description": "Search", "inputSchema": obj},
             {"name": "create_grocery_cart_with_quantities", "description": "Create cart", "inputSchema": obj},
             {"name": "cart_get_basket_price", "description": "Price", "inputSchema": obj},
+            {"name": "cart_checkout", "description": "Food checkout (spends money)", "inputSchema": obj},
+            {"name": "create_ride", "description": "Books a real captain", "inputSchema": obj},
             {"name": CHECKOUT, "description": "Checkout",
-             "inputSchema": {"type": "object", "properties": {"cart_id": {}, "lat": {}, "lng": {}},
-                             "required": ["cart_id", "lat", "lng"]}},
+             "inputSchema": {"type": "object", "properties": {"cart_id": {}, "lat": {}, "lng": {}, "total_price": {}},
+                             "required": ["cart_id", "lat", "lng", "total_price"]}},
         ]
 
     def call(self, name, args):
@@ -69,8 +71,10 @@ def test_llm_never_sees_or_calls_checkout(tmp_path):
     store, fake, tools = setup(tmp_path)
     names = [s["function"]["name"] for s in tools.schemas()]
     assert CHECKOUT not in names and "request_confirmation" in names and "user_info" in names
+    assert "cart_checkout" not in names and "create_ride" not in names  # nothing else that spends money
     assert "BLOCKED" in tools.run(CHECKOUT, {"cart_id": "C42"}, ctx(1))["error"]
-    assert checkouts(fake) == []
+    assert "not available" in tools.run("cart_checkout", {}, ctx(1))["error"]
+    assert [c for c in fake.calls if c[0] in ("cart_checkout", CHECKOUT)] == []
 
 
 def test_user_yes_in_next_message_checks_out_once_with_seen_args(tmp_path):
@@ -80,7 +84,7 @@ def test_user_yes_in_next_message_checks_out_once_with_seen_args(tmp_path):
     assert "next message" in tools.run("place_order", {"confirmed_by": "user"}, ctx(1, "اه"))["error"]
     r = tools.run("place_order", {"confirmed_by": "user"}, ctx(2, "اه يا ريت"))
     assert r["status"] == "ordered"
-    assert checkouts(fake) == [(CHECKOUT, {"cart_id": "C42", "lat": 31.95, "lng": 35.91})]
+    assert checkouts(fake) == [(CHECKOUT, {"cart_id": "C42", "lat": 31.95, "lng": 35.91, "total_price": 4.25})]
     # a second yes cannot order again
     assert "error" in tools.run("place_order", {"confirmed_by": "user"}, ctx(3, "اه"))
     assert len(checkouts(fake)) == 1
