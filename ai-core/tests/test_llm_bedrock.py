@@ -45,7 +45,7 @@ def test_chat_returns_openai_like_tool_calls():
     assert msg.content == "checking" and msg.tool_calls[0].function.name == "view_cart"
     assert json.loads(msg.tool_calls[0].function.arguments) == {}
     assert fake.seen[0]["toolConfig"]["tools"][0]["toolSpec"]["name"] == "view_cart"
-    assert fake.seen[0]["inferenceConfig"]["temperature"] == 0
+    assert "temperature" not in fake.seen[0]["inferenceConfig"]  # Claude 5.5 models reject it
 
 
 def test_throttling_is_retried(monkeypatch):
