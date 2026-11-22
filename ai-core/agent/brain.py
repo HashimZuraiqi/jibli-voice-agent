@@ -57,6 +57,15 @@ CONFIRM_GROCERY = ("- Nothing is ordered until it is confirmed: get the basket p
                    "failed checkout on your own.")
 
 
+# who confirms (settings page, /api/settings): added to confirm_rules only; the gate itself is unchanged
+CONFIRM_MODE_RULES = {
+    "self": "\n- This user chose to confirm her own orders: ask her (by='user'), not the family.",
+    "either": "",  # the default above: she or the family member who usually confirms, whoever is first
+    "family": "\n- This user chose that the family member who usually confirms must approve and pay: ask them "
+              "(by=<their name>), not her.",
+}
+
+
 def prompt(file, **kw):
     text = (PROMPTS / f"{file}.txt").read_text(encoding="utf-8")
     for k, v in kw.items():
@@ -107,7 +116,8 @@ class Brain:
                       if advice["cold_start"] else "",
                       style=advice["style"], style_hint=advice["style_hint"], offer=offer,
                       orders=self.orders_text(user_id),
-                      confirm_rules=CONFIRM_ALL if hasattr(self.tools, "execute_pending") else CONFIRM_GROCERY,
+                      confirm_rules=(CONFIRM_ALL if hasattr(self.tools, "execute_pending") else CONFIRM_GROCERY)
+                      + CONFIRM_MODE_RULES.get(self.store.state.get("settings", {}).get(user_id, {}).get("confirm_mode"), ""),
                       ride=ride_text(advice.get("usual_ride")) if getattr(self.tools, "rides", True) else "rides are not available yet",
                       box=box_text(advice.get("usual_box")), places=self.places_text()) + sandbox_note() + SPEED_RULE
 

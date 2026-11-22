@@ -122,7 +122,13 @@ def chat(m: Msg):
 @app.post("/api/reminder")
 def reminder(m: Msg):
     check_user(m.user_id)
-    return S["brain"].reminder(m.user_id, now_from(m.time))
+    out = S["brain"].reminder(m.user_id, now_from(m.time))
+    if out.get("reply"):  # the exact sentence Jibli said, for the "Why this?" sheet
+        st = S["store"]
+        st.state.setdefault("spoken", {})[m.user_id] = {"text": out["reply"], "ts": now_from(m.time).isoformat(timespec="minutes"),
+                                                        "style": (out.get("advice") or {}).get("style")}
+        st.save()
+    return out
 
 
 @app.post("/api/feedback")
@@ -156,6 +162,69 @@ def reset():
         (STATE / name).unlink(missing_ok=True)
     build()
     return {"status": "reset"}
+
+
+# ---------------------------------------------------------------- demo app (/app/<user>): settings + "Why this?"
+
+CONFIRM_MODES = ("self", "either", "family")
+
+
+class Settings(BaseModel):
+    confirm_mode: str
+
+
+def confirm_mode(user_id):
+    return S["store"].state.get("settings", {}).get(user_id, {}).get("confirm_mode", "either")
+
+
+@app.get("/app/{user_id}")
+def demo_app(user_id: str):
+    check_user(user_id)
+    return FileResponse(ROOT / "web" / "app.html")
+
+
+@app.get("/api/settings/{user_id}")
+def get_settings(user_id: str):
+    """Who confirms orders (saved per user in the store state), plus the guardrail limits, read-only."""
+    check_user(user_id)
+    from agent.personalization import guardrails as g
+    u = S["store"].users[user_id]
+    return {"confirm_mode": confirm_mode(user_id), "modes": list(CONFIRM_MODES),
+            "confirmer": u.get("confirm_by"),
+            "confirmer_ar": next((f.get("name_ar", f["name"]) for f in u.get("family", []) if f["name"] == u.get("confirm_by")), None),
+            "limits": {"spend_caps": g.SPEND_CAPS, "quiet_hours": list(g.QUIET_HOURS), "reminders_per_day": 1,
+                       "offer_every_days": g.OFFER_EVERY_DAYS}}
+
+
+@app.post("/api/settings/{user_id}")
+def set_settings(user_id: str, body: Settings):
+    check_user(user_id)
+    if body.confirm_mode not in CONFIRM_MODES:
+        raise HTTPException(400, f"confirm_mode must be one of {CONFIRM_MODES}")
+    st = S["store"]
+    st.state.setdefault("settings", {}).setdefault(user_id, {})["confirm_mode"] = body.confirm_mode
+    st.save()
+    return get_settings(user_id)
+
+
+@app.get("/api/why/{user_id}")
+def why(user_id: str, time: str | None = None):
+    """The personalization layer behind a reminder: purchase history per item (learn), due scores (predict),
+    bandit style + uplift offer decision (decide) and the exact sentence Jibli said (speak). Read-only."""
+    check_user(user_id)
+    st, now = S["store"], now_from(time)
+    snap = S["layer"].snapshot(user_id, now)
+    history = {}
+    for o in st.orders(user_id):
+        for it in o.get("items", []):
+            history.setdefault(it.get("item_id"), []).append(o["ts"][:10])
+    items = [dict(p, dates=sorted(history.get(p["item_id"], []))[-8:]) for p in snap["predictions"][:8]]
+    reminders = st.events(user_id, "reminder")
+    return {"now": now.isoformat(timespec="minutes"), "items": items, "advice": snap["advice"],
+            "usual_hour": st.users[user_id].get("usual_hour"),
+            "last_reminder": reminders[-1] if reminders else None,
+            "spoken": st.state.get("spoken", {}).get(user_id),
+            "rewards": st.events(user_id, "reward")[-5:][::-1]}
 
 
 # ---------------------------------------------------------------- voice page (elder) + family page (Faris)
@@ -310,7 +379,7 @@ def family_view(user_id: str):
     # Arabic names for the pages (confirm_by, pending "by", last order "by" are stored in English)
     names = {u["name"]: u.get("name_ar", u["name"]), **{f["name"]: f.get("name_ar", f["name"]) for f in u.get("family", [])}}
     view = {"user": {"name": u["name"], "name_ar": u.get("name_ar", u["name"])}, "confirmer": u.get("confirm_by"),
-            "names": names, "waiting": False}
+            "names": names, "waiting": False, "confirm_mode": confirm_mode(user_id)}
     if p:
         cart = p.get("cart")
         if p.get("tool"):  # mcp-all: careem.py stored the exact checkout

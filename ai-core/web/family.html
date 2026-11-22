@@ -53,7 +53,10 @@ function header(v) { return `<div class="app"><b>جيبلي · Careem</b><span>�
 function render(v) {
   if (acting) return;
   const who = esc(v.user.name_ar);
-  if (v.waiting) {
+  if (v.waiting && v.asked_user && v.confirm_mode === "self") {  // she chose to confirm her own orders (settings)
+    result = null;
+    $("card").innerHTML = `${header(v)}<div class="idle">${who} بتأكّد طلباتها بنفسها 👌<br><small>غيّروا الإعداد من تطبيقها: «مين بيأكّد طلباتي؟»</small></div>`;
+  } else if (v.waiting) {
     result = null;
     const items = (v.items || []).map(i => `<div class="row"><span>${esc(i.name)} · ${esc(i.qty)}</span><span>${i.price != null ? esc(money(i.price, v.currency)) : ""}</span></div>`).join("")
                   || (v.summary ? `<div class="row">${esc(v.summary)}</div>` : "");
