@@ -1,0 +1,369 @@
+{
+ "places": {
+  "Home": {
+   "location_id": "LOC-50001",
+   "latitude": 25.0866,
+   "longitude": 55.1474
+  },
+  "Work": {
+   "location_id": "LOC-50002",
+   "latitude": 25.2172,
+   "longitude": 55.2826
+  },
+  "Gym": {
+   "location_id": "LOC-50003",
+   "latitude": 25.0702,
+   "longitude": 55.143
+  },
+  "Dubai Mall": {
+   "location_id": "LOC-poi-dubai-mall",
+   "latitude": 25.1972,
+   "longitude": 55.2796
+  },
+  "Airport T3": {
+   "location_id": "LOC-poi-dxb-t3",
+   "latitude": 25.2528,
+   "longitude": 55.3644
+  }
+ },
+ "rides": [
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-09-15T09:27",
+   "from": "Home",
+   "to": "Dubai Mall",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-09-15T12:40",
+   "from": "Dubai Mall",
+   "to": "Home",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-09-18T11:11",
+   "from": "Home",
+   "to": "Gym",
+   "product": "Go"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-09-18T13:27",
+   "from": "Gym",
+   "to": "Home",
+   "product": "Go"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-09-22T09:06",
+   "from": "Home",
+   "to": "Dubai Mall",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-09-22T12:30",
+   "from": "Dubai Mall",
+   "to": "Home",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-09-25T11:00",
+   "from": "Home",
+   "to": "Gym",
+   "product": "Go"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-09-25T13:10",
+   "from": "Gym",
+   "to": "Home",
+   "product": "Go"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-09-29T09:00",
+   "from": "Home",
+   "to": "Dubai Mall",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-09-29T12:23",
+   "from": "Dubai Mall",
+   "to": "Home",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-10-02T11:31",
+   "from": "Home",
+   "to": "Gym",
+   "product": "Go"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-10-02T13:25",
+   "from": "Gym",
+   "to": "Home",
+   "product": "Go"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-10-06T09:19",
+   "from": "Home",
+   "to": "Dubai Mall",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-10-06T12:26",
+   "from": "Dubai Mall",
+   "to": "Home",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-10-09T11:40",
+   "from": "Home",
+   "to": "Gym",
+   "product": "Go"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-10-09T13:14",
+   "from": "Gym",
+   "to": "Home",
+   "product": "Go"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-10-13T09:31",
+   "from": "Home",
+   "to": "Dubai Mall",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-10-13T12:11",
+   "from": "Dubai Mall",
+   "to": "Home",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-10-16T11:35",
+   "from": "Home",
+   "to": "Gym",
+   "product": "Go"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-10-16T13:31",
+   "from": "Gym",
+   "to": "Home",
+   "product": "Go"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-10-20T09:11",
+   "from": "Home",
+   "to": "Dubai Mall",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-10-20T12:11",
+   "from": "Dubai Mall",
+   "to": "Home",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-10-23T11:39",
+   "from": "Home",
+   "to": "Gym",
+   "product": "Go"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-10-23T13:11",
+   "from": "Gym",
+   "to": "Home",
+   "product": "Go"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-10-27T09:36",
+   "from": "Home",
+   "to": "Dubai Mall",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-10-27T12:34",
+   "from": "Dubai Mall",
+   "to": "Home",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-10-30T11:30",
+   "from": "Home",
+   "to": "Gym",
+   "product": "Go"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-10-30T13:36",
+   "from": "Gym",
+   "to": "Home",
+   "product": "Go"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-11-03T09:37",
+   "from": "Home",
+   "to": "Dubai Mall",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-11-03T12:29",
+   "from": "Dubai Mall",
+   "to": "Home",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-11-06T11:00",
+   "from": "Home",
+   "to": "Gym",
+   "product": "Go"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-11-06T13:33",
+   "from": "Gym",
+   "to": "Home",
+   "product": "Go"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-11-10T09:29",
+   "from": "Home",
+   "to": "Dubai Mall",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-11-10T12:08",
+   "from": "Dubai Mall",
+   "to": "Home",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-11-13T11:02",
+   "from": "Home",
+   "to": "Gym",
+   "product": "Go"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-11-13T13:20",
+   "from": "Gym",
+   "to": "Home",
+   "product": "Go"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-11-17T09:29",
+   "from": "Home",
+   "to": "Dubai Mall",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-11-17T12:19",
+   "from": "Dubai Mall",
+   "to": "Home",
+   "product": "Comfort"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-11-20T11:32",
+   "from": "Home",
+   "to": "Gym",
+   "product": "Go"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-11-20T13:37",
+   "from": "Gym",
+   "to": "Home",
+   "product": "Go"
+  }
+ ],
+ "box": [
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-09-14T16:37",
+   "from": "Work",
+   "to": "Home",
+   "vehicle": "Motorbike",
+   "category": "Documents and others"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-09-14T16:39",
+   "from": "Home",
+   "to": "Work",
+   "vehicle": "Car",
+   "category": "Food, groceries"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-09-26T16:59",
+   "from": "Work",
+   "to": "Home",
+   "vehicle": "Motorbike",
+   "category": "Documents and others"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-10-11T16:00",
+   "from": "Work",
+   "to": "Home",
+   "vehicle": "Motorbike",
+   "category": "Documents and others"
+  },
+  {
+   "user_id": "um_khaled",
+   "ts": "2026-10-13T16:28",
+   "from": "Home",
+   "to": "Work",
+   "vehicle": "Car",
+   "category": "Food, groceries"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-10-26T16:37",
+   "from": "Work",
+   "to": "Home",
+   "vehicle": "Motorbike",
+   "category": "Documents and others"
+  },
+  {
+   "user_id": "abu_sami",
+   "ts": "2026-11-11T16:59",
+   "from": "Work",
+   "to": "Home",
+   "vehicle": "Motorbike",
+   "category": "Documents and others"
+  }
+ ]
+}

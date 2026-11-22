@@ -2,6 +2,7 @@
 from . import guardrails as g
 from .bandit import STYLES, ReminderBandit, context_vector
 from .repurchase import due_items, predictions, similar_user_staples
+from . import services
 from .uplift import MIN_UPLIFT, OFFER, OfferModel
 from ..store import parse_ts
 
@@ -11,6 +12,7 @@ class PersonalizationLayer:
         self.store = store
         self.bandit = ReminderBandit(store.state_dir)
         self.offers = OfferModel(store.state_dir)
+        self.services = services.load()
 
     def context(self, user_id, now, n_due):
         u = self.store.users[user_id]
@@ -31,6 +33,8 @@ class PersonalizationLayer:
             "running_out": [{k: p[k] for k in ("item_id", "name_en", "name_ar", "usual_qty", "days_since",
                                                 "median_gap_days", "due_score")} for p in due],
             "cold_start": cold,
+            "usual_ride": services.usual_ride(self.services, user_id, now),
+            "usual_box": services.usual_box(self.services, user_id, now),
             "suggestions_for_new_user": similar_user_staples(self.store, user_id) if cold else [],
             "style": style, "style_hint": STYLES[style], "style_scores": expectations, "context": ctx,
             "offer": dict(OFFER) if give_offer else None,
@@ -43,8 +47,9 @@ class PersonalizationLayer:
         """Proactive reminder: only if the guardrails allow and something is running out."""
         ok, reason = g.can_remind(self.store, user_id, now)
         advice = self.advise(user_id, now)
-        if ok and not advice["running_out"]:
-            ok, reason = False, "nothing is running out"
+        due_box = advice.get("usual_box") and advice["usual_box"]["due"]
+        if ok and not (advice["running_out"] or due_box or advice.get("usual_ride")):
+            ok, reason = False, "nothing is running out and no usual ride or Box delivery is due"
         if not ok:
             self.store.log(user_id, "guardrail", now, check="reminder", ok=False, reason=reason)
             return None, advice, reason

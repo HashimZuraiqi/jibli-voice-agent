@@ -1,5 +1,6 @@
 """Demo server: .venv/bin/python -m uvicorn web.app:app --port 8000  then open http://127.0.0.1:8000"""
 import datetime as dt
+import os
 import shutil
 from pathlib import Path
 
@@ -17,6 +18,7 @@ from agent.memory import UserMemory  # noqa: E402
 from agent.personalization.layer import PersonalizationLayer  # noqa: E402
 from agent.store import STATE, Store  # noqa: E402
 from agent.tools import Tools  # noqa: E402
+from agent.careem import CareemTools  # noqa: E402
 
 app = FastAPI(title="Voice agent: LLM brain + personalization")
 S = {}
@@ -27,7 +29,12 @@ def build():
     llm = LLM()
     memory = S.get("memory") or UserMemory(STATE, llm.models)  # Qdrant keeps a file lock, so reuse it
     layer = PersonalizationLayer(store)
-    S.update(store=store, memory=memory, layer=layer, brain=Brain(store, memory, layer, Tools(store, memory), llm))
+    # mcp (default): Careem's tools through careem-mcp (sandbox or production); mock: the offline JSON catalog
+    if os.getenv("CAREEM_MODE", "mcp").lower() == "mcp":
+        tools = CareemTools(store, memory, layer.services["places"])
+    else:
+        tools = Tools(store, memory)
+    S.update(store=store, memory=memory, layer=layer, brain=Brain(store, memory, layer, tools, llm))
 
 
 build()
@@ -36,6 +43,8 @@ build()
 def now_from(t):
     """Demo clock: optional HH:MM override for today, to show quiet hours etc."""
     n = dt.datetime.now().replace(second=0, microsecond=0)
+    if t and "T" in t:  # full date and time, e.g. 2026-11-24T09:10
+        return dt.datetime.fromisoformat(t)
     if t:
         h, m = (int(x) for x in t.split(":"))
         n = n.replace(hour=h, minute=m)
@@ -54,7 +63,7 @@ async def quota(_, e):
 
 @app.exception_handler(RuntimeError)
 async def llm_failed(_, e):  # all models failed (bad key, provider down): show it on the page
-    return JSONResponse({"error": f"LLM unavailable: {str(e)[:300]}. Check OPENROUTER_API_KEY in .env."}, status_code=502)
+    return JSONResponse({"error": f"LLM unavailable: {str(e)[:300]}. Check the AWS credentials (or OPENROUTER_API_KEY) in .env."}, status_code=502)
 
 
 class Msg(BaseModel):
@@ -99,6 +108,8 @@ def state(user_id: str, time: str | None = None):
     return {"now": now.isoformat(timespec="minutes"), "user": st.users[user_id], "memory": S["memory"].all(user_id),
             "predictions": snap["predictions"][:8], "advice": snap["advice"], "cart": st.cart_view(user_id),
             "pending": st.state["pending"].get(user_id), "orders": st.orders(user_id)[-3:][::-1],
+            "service_orders": [o for o in st.state.get("service_orders", []) if o["user_id"] == user_id][-5:][::-1],
+            "careem_mode": os.getenv("CAREEM_MODE", "mcp").lower(),
             "events": st.events(user_id)[-12:][::-1], "llm_calls": S["brain"].llm.calls}
 
 

@@ -1,7 +1,10 @@
+boto3==1.44.9
 causalml==0.18.0
 fastapi==0.165.0
 fastembed==0.9.1
+jsonschema==4.26.0
 mabwiser==2.7.4
+mcp==2.3.0
 mem0ai==2.2.1
 numpy==2.5.5
 openai==3.57.0

@@ -4,7 +4,7 @@ import re
 
 from ..store import parse_ts
 
-SPEND_CAP_JOD = 30.0
+SPEND_CAPS = {"JOD": 30.0, "AED": 150.0}  # per order; the Careem sandbox prices in AED (150 AED is about 29 JOD)
 QUIET_HOURS = (22, 8)  # no reminders from 22:00 to 08:00
 OFFER_EVERY_DAYS = 7
 YES_WORDS = {"yes", "yeah", "ok", "okay", "sure", "confirm", "نعم", "اه", "ايوا", "ايوه", "تمام",
@@ -66,19 +66,27 @@ def allowed_confirmers(store, user_id):
 
 
 def can_place_order(store, user_id, confirmed_by, user_text=None):
-    cart = store.cart_view(user_id)
-    if not cart["lines"]:
-        return False, "the cart is empty"
-    if cart["total_jod"] > SPEND_CAP_JOD:
-        return False, f"total {cart['total_jod']} JOD is over the {SPEND_CAP_JOD} JOD cap; a family member must confirm in the app"
+    pending = store.state["pending"].get(user_id)
+    if not pending and not store.cart(user_id):
+        return False, "nothing is waiting for approval"
+    careem = bool(pending and pending.get("tool"))  # a proposed Careem checkout (agent/careem.py)
+    if careem:
+        total, currency = pending["total"], pending.get("currency", "AED")
+    else:
+        cart = store.cart_view(user_id)
+        if not cart["lines"]:
+            return False, "the cart is empty"
+        total, currency = cart["total_jod"], "JOD"
+    cap = SPEND_CAPS.get(currency, SPEND_CAPS["AED"])
+    if total > cap:
+        return False, f"total {total} {currency} is over the {cap} {currency} cap; a family member must confirm in the app"
     if confirmed_by not in allowed_confirmers(store, user_id):
         return False, f"{confirmed_by} is not allowed to confirm orders for this user"
-    pending = store.state["pending"].get(user_id)
     if not pending:
         return False, "ask for confirmation first (request_confirmation), then wait for the answer"
     if pending["by"] != confirmed_by:
         return False, f"confirmation was requested from {pending['by']}, not {confirmed_by}"
-    if pending.get("cart") != cart:
+    if not careem and pending.get("cart") != cart:
         return False, "the cart changed after confirmation was requested; ask again"
     if confirmed_by == store.users[user_id]["name"] and not says_yes(user_text):
         return False, "the user has not clearly said yes in this message"

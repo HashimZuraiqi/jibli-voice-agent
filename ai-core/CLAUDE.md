@@ -8,14 +8,15 @@ code docs: [Sanad — Code Documentation](https://claude.ai/artifact/4RW78cQdw1F
 
 **Our scope: the LLM brain and the personalization layer only.** Speech-to-text and text-to-speech are a teammate's
 part: here the input is the already-transcribed text, and the output is the text a TTS would speak.
-Careem's services are mocked with local JSON data.
+Careem's services come through **careem-mcp** (MCP): a local sandbox built from Careem's spec in `careem-mcp-sandbox/` (groceries, food, cart, Box, user; production-identical tool shapes, fixed sample answers), rides through a local stand-in (not in Careem's public sandbox yet). `CAREEM_MODE=mock` falls back to the offline JSON catalog.
 
 ## Stack
 
 - Python 3.12 venv in `.venv` (`python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt`).
-- LLM: OpenRouter free models via the `openai` SDK (`OPENROUTER_API_KEY` in `.env`, never in code).
-  Free tier = 50 requests/day per account; each chat turn uses ~3–5 (agent + Mem0 fact extraction).
-- Memory: **Mem0** (`mem0ai`), LLM = OpenRouter, embedder = **FastEmbed** local multilingual
+- LLM: **Claude on Amazon Bedrock** (Converse API via `boto3`, `global.anthropic.claude-sonnet-5-5`, us-east-1).
+  Credentials come from the environment / default chain, never code; the event's expire hourly, so paste new ones
+  into `.env` and the next call reloads them. Fallback: `LLM_PROVIDER=openrouter` (free tier, 50 requests/day).
+- Memory: **Mem0** (`mem0ai`), LLM = Bedrock Haiku (or OpenRouter), embedder = **FastEmbed** local multilingual
   (`paraphrase-multilingual-MiniLM-L12-v2`, 384 dims), vector store = local Qdrant in `state/`.
 - Bandit: **MABWiser** LinUCB. Uplift: **CausalML** `BaseTClassifier` (control group named `"control"`).
 - Web: FastAPI + one static HTML page.
@@ -53,10 +54,12 @@ reorder gaps per item category (`data/catalog.json` `default_gap_days`).
 ## Layout
 
 ```
-agent/llm.py            OpenRouter client, model fallback, retries
-agent/tools.py          mocked Careem tools (catalog, usual basket, cart, confirm, place order)
+agent/llm.py            Bedrock Converse client (OpenRouter fallback), same OpenAI-style return shape
+agent/careem.py         careem-mcp client: Careem tools for the LLM, checkout gate, rides stand-in
+agent/tools.py          offline mock tools (CAREEM_MODE=mock)
 agent/memory.py         Mem0 wrapper + sensitive-data filter
-agent/personalization/  repurchase, bandit, uplift, guardrails, layer
+agent/personalization/  repurchase, services (usual ride / Box), bandit, uplift, guardrails, layer
+careem-mcp-sandbox/     local careem-mcp server from Careem's spec + its CLI and acceptance tests
 agent/brain.py          the 7-step loop
 data/                   generate.py → catalog, users, orders, synthetic bandit + uplift logs
 web/app.py, web/index.html   chat page + side panel (memory, due items, bandit choice, offer, guardrail log)
@@ -71,3 +74,12 @@ state/                  runtime state (Mem0/Qdrant, bandit pickle, carts); git-i
   `.venv/bin/python -m pytest -q` before saying something works.
 - Prompts live in `agent/prompts/*.txt`.
 - Deterministic: temperature 0, fixed seeds for bandit, uplift and data generation.
+
+## Careem MCP rules
+
+- The LLM never gets the spending tools (`cart_grocery_checkout`, `cart_checkout`, `box_create_order`, `rides_request`).
+  It proposes the exact call with `request_confirmation`; `CareemTools.execute_pending` runs it once after the user's
+  clear yes (later message) or the family's approval, and never retries a failed checkout.
+- A new cart or quote cancels a pending confirmation only for the same service.
+- Spend cap per currency (`SPEND_CAPS`: 30 JOD, 150 AED). The sandbox world is Dubai / AED; production in Amman is JOD.
+- Start the sandbox before the app: `.venv/bin/python careem-mcp-sandbox/careem_mcp.py start`.
