@@ -17,7 +17,8 @@ def judge(llm, text, asked):
         return "unclear"
     if g.says_yes(text):
         return "yes"
-    negated = g.says_no(text)  # a real no / wait word: the LLM may never turn this into a yes
+    negated = g.says_no(text)
+    blocked = g.blocks_yes(text)  # no / wait words, conditions, question words: the LLM may never make these a yes
     if llm is None:
         return "no" if negated else "unclear"
     try:
@@ -28,4 +29,4 @@ def judge(llm, text, asked):
     except Exception:  # LLM down or keys expired: never guess a yes
         return "no" if negated else "unclear"
     verdict = {"YES": "yes", "NO": "no"}.get(words[0] if words else "", "unclear")
-    return "unclear" if verdict == "yes" and negated else verdict
+    return "unclear" if verdict == "yes" and blocked else verdict
