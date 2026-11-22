@@ -1,12 +1,10 @@
 """The brain: 7 steps per user message (hear, remember, advise, think, act, confirm, learn)."""
 import json
-import re
 from pathlib import Path
 
 from .personalization import guardrails as g
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
-NO = re.compile(r"\b(no|not now|later|don't)\b|^\s*لا\b|لأ|مش هلا|مش هسا|بعدين|ما بدي|مابدي", re.I)
 MAX_TOOL_ROUNDS = 6
 
 
@@ -55,7 +53,7 @@ class Brain:
         open_reminder = [e for e in self.store.events(user_id, "reminder") if "reply" not in e]
         note = ""
         if open_reminder:  # the user's answer to our reminder is the bandit's reward
-            reply = "yes" if g.YES.search(text) else "no" if NO.search(text) else None
+            reply = "no" if g.says_no(text) else "yes" if g.says_yes(text) else None
             if reply:
                 self.layer.feedback(user_id, reply, now)
                 steps.append({"step": "7 learn (reward)", "reminder_style": open_reminder[-1]["style"], "reply": reply})

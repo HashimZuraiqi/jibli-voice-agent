@@ -7,7 +7,24 @@ from ..store import parse_ts
 SPEND_CAP_JOD = 30.0
 QUIET_HOURS = (22, 8)  # no reminders from 22:00 to 08:00
 OFFER_EVERY_DAYS = 7
-YES = re.compile(r"\b(yes|yeah|ok|okay|sure|order it|go ahead|confirm)\b|نعم|اه|آه|أه|ايوا|إيوا|ايوه|تمام|اطلب|اطلبه|اطلبها|ماشي|يلا|موافق|اكيد|أكيد", re.I)
+YES_WORDS = {"yes", "yeah", "ok", "okay", "sure", "confirm", "نعم", "اه", "آه", "أه", "ايوا", "إيوا", "ايوه", "تمام",
+             "اطلب", "اطلبه", "اطلبها", "ماشي", "يلا", "موافق", "موافقه", "اكيد", "أكيد"}
+YES_PHRASES = ("order it", "go ahead")
+NO = re.compile(r"\b(no|not|don't|dont|cancel|later|stop)\b|(^|\s)(لا|لأ|مش|ما|بلاش|بعدين|الغي|إلغاء|الغاء|وقف)(\s|$)|ما بدي|مابدي", re.I)
+
+
+def says_no(text):
+    return bool(text and NO.search(text))
+
+
+def says_yes(text):
+    """Consent = a whole yes word and no negation anywhere in the message."""
+    if not text or says_no(text):
+        return False
+    t = text.lower()
+    return any(w in YES_WORDS for w in re.findall(r"[\w']+", t)) or any(p in t for p in YES_PHRASES)
+
+
 # sensitive details are never stored unless the user chose to share them for ordering
 SENSITIVE = re.compile(
     r"\b\d{9,}\b|password|passcode|pin code|credit card|iban|diabet|cancer|depress|pregnan|"
@@ -42,10 +59,15 @@ def can_place_order(store, user_id, confirmed_by, user_text=None):
         return False, f"total {cart['total_jod']} JOD is over the {SPEND_CAP_JOD} JOD cap; a family member must confirm in the app"
     if confirmed_by not in allowed_confirmers(store, user_id):
         return False, f"{confirmed_by} is not allowed to confirm orders for this user"
-    if not store.state["pending"].get(user_id):
+    pending = store.state["pending"].get(user_id)
+    if not pending:
         return False, "ask for confirmation first (request_confirmation), then wait for the answer"
-    if confirmed_by == store.users[user_id]["name"] and not (user_text and YES.search(user_text)):
-        return False, "the user has not said yes in this message"
+    if pending["by"] != confirmed_by:
+        return False, f"confirmation was requested from {pending['by']}, not {confirmed_by}"
+    if pending.get("cart") != cart:
+        return False, "the cart changed after confirmation was requested; ask again"
+    if confirmed_by == store.users[user_id]["name"] and not says_yes(user_text):
+        return False, "the user has not clearly said yes in this message"
     return True, "ok"
 
 

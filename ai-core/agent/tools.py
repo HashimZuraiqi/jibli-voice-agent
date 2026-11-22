@@ -24,7 +24,7 @@ class Tools:
             ("view_cart", "Show the cart and its total in JOD.", {}, []),
             ("request_confirmation", "Ask for confirmation before ordering: by='user' to ask the user, or the family member's name.",
              {"by": S}, ["by"]),
-            ("place_order", "Place the order. Only after request_confirmation, and only when confirmed_by has said yes.",
+            ("place_order", "Place the order after the USER said yes to request_confirmation(by='user'). Family members approve in their own app, never here.",
              {"confirmed_by": S}, ["confirmed_by"]),
             ("memory_list", "Everything remembered about the user (answer 'what do you know about me?').", {}, []),
             ("memory_forget", "Delete one remembered fact by id, or everything when memory_id is 'all'.", {"memory_id": S}, ["memory_id"]),
@@ -65,11 +65,13 @@ class Tools:
             return {"error": "qty must be 1-20"}
         cart = self.store.cart(ctx["user_id"])
         cart[item_id] = cart.get(item_id, 0) + int(qty)
+        self.store.state["pending"].pop(ctx["user_id"], None)  # a changed cart needs a new confirmation
         self.store.save()
         return self.store.cart_view(ctx["user_id"])
 
     def t_remove_from_cart(self, ctx, item_id):
         self.store.cart(ctx["user_id"]).pop(item_id, None)
+        self.store.state["pending"].pop(ctx["user_id"], None)  # a changed cart needs a new confirmation
         self.store.save()
         return self.store.cart_view(ctx["user_id"])
 
@@ -94,6 +96,10 @@ class Tools:
         uid = ctx["user_id"]
         if confirmed_by.lower() in ("user", "me"):
             confirmed_by = self.store.users[uid]["name"]
+        if confirmed_by != self.store.users[uid]["name"]:
+            # family members approve only in their own app (Brain.family_decision), never through the LLM
+            self.store.log(uid, "guardrail", ctx["now"], check="place_order", ok=False, reason="family approval must come from the family app")
+            return {"error": f"BLOCKED by guardrail: {confirmed_by} must approve in their app; tell the user it is waiting for them"}
         pending = self.store.state["pending"].get(uid)
         # the user's own yes must come in a later message than the confirmation request
         if pending and confirmed_by == self.store.users[uid]["name"] and pending.get("turn") == ctx.get("turn"):

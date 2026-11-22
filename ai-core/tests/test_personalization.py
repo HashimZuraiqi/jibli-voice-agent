@@ -117,3 +117,30 @@ def test_reminder_is_recorded_only_when_sent(tmp_path):
     lay.record_reminder("um_khaled", NOW, advice)
     assert lay.reminder("um_khaled", NOW.replace(hour=12))[0] is None  # one per day
     assert lay.feedback("um_khaled", "yes", NOW)["style"] == advice["style"]
+
+
+def test_llm_cannot_approve_for_family(store):
+    tools = Tools(store, NoMemory())
+    ctx = {"user_id": "um_khaled", "now": NOW, "text": "", "turn": 1}
+    tools.run("add_to_cart", {"item_id": "rice"}, ctx)
+    tools.run("request_confirmation", {"by": "Khaled"}, ctx)
+    assert "BLOCKED" in tools.run("place_order", {"confirmed_by": "Khaled"}, dict(ctx, turn=2))["error"]
+    assert not g.can_place_order(store, "um_khaled", "Um Khaled", "اه")[0]   # asked Khaled, not her
+    assert g.can_place_order(store, "um_khaled", "Khaled")[0]                 # Khaled's own approval
+
+
+def test_cart_change_cancels_confirmation(store):
+    tools = Tools(store, NoMemory())
+    ctx = {"user_id": "um_khaled", "now": NOW, "text": "", "turn": 1}
+    tools.run("add_to_cart", {"item_id": "rice"}, ctx)
+    tools.run("request_confirmation", {"by": "Khaled"}, ctx)
+    tools.run("add_to_cart", {"item_id": "olive_oil", "qty": 3}, ctx)
+    assert not store.state["pending"].get("um_khaled")
+    assert not g.can_place_order(store, "um_khaled", "Khaled")[0]
+
+
+def test_consent_needs_a_clear_yes():
+    for yes in ("اه", "اه اطلبه", "تمام", "yes please", "ok go ahead"):
+        assert g.says_yes(yes), yes
+    for no in ("مش تمام", "لا", "لا تطلب", "الاهم الخبز", "not yet", "no, cancel it", "ما بدي"):
+        assert not g.says_yes(no), no
