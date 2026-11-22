@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sanad Voice Agent</title>
+<style>
+  :root { --bg:#f4f6f5; --card:#fff; --text:#17201c; --muted:#5d6b64; --line:#dfe5e2; --brand:#1f8a4c; --me:#e3f3e9; --bot:#fff;
+          --warn:#b3541e; --bad:#c62828; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111614; --card:#1a201d; --text:#e6ece9; --muted:#97a59e; --line:#2c3531;
+          --me:#1e3a2a; --bot:#1a201d; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif; background:var(--bg); color:var(--text); }
+  header { padding: 12px 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; border-bottom:1px solid var(--line); background:var(--card); }
+  header h1 { font-size:18px; margin:0 12px 0 0; } header h1 span { color: var(--brand); }
+  select, input, button { font: inherit; }
+  select, input[type=time] { padding:6px 8px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--text); }
+  button { border:0; border-radius:8px; padding:8px 14px; background:var(--brand); color:#fff; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--brand); border:1px solid var(--line); }
+  button:disabled { opacity:.5; cursor:wait; }
+  main { display:grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1fr); gap:14px; padding:14px 16px; max-width:1300px; margin:0 auto; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  #chat { height: 52vh; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:4px; }
+  .msg { max-width: 85%; padding:9px 12px; border-radius:12px; border:1px solid var(--line); white-space:pre-wrap; unicode-bidi: plaintext; }
+  .me { align-self:flex-end; background:var(--me); } .bot { align-self:flex-start; background:var(--bot); }
+  .sys { align-self:center; color:var(--muted); font-size:13px; text-align:center; }
+  .row { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; align-items:center; }
+  #text { flex:1; min-width:180px; padding:9px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--text); unicode-bidi: plaintext; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:14px 0 6px; } h2:first-child { margin-top:0; }
+  table { width:100%; border-collapse:collapse; font-size:13px; } td, th { padding:4px 6px; border-bottom:1px solid var(--line); text-align:left; }
+  th { color:var(--muted); font-weight:500; }
+  .due { color: var(--warn); font-weight:600; }
+  .pill { display:inline-block; padding:1px 8px; border-radius:99px; background:var(--me); font-size:12px; margin:1px; }
+  .bar { height:8px; background:var(--brand); border-radius:4px; display:inline-block; vertical-align:middle; }
+  ul { margin:4px 0; padding-left:18px; } li { margin:2px 0; } .muted { color:var(--muted); font-size:13px; }
+  .bad { color:var(--bad); } details { margin-top:6px; } summary { cursor:pointer; color:var(--muted); font-size:13px; }
+  pre { white-space:pre-wrap; font-size:12px; background:var(--bg); padding:8px; border-radius:8px; max-height:260px; overflow:auto; }
+  .x { background:none; color:var(--bad); padding:0 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>Sanad</span> · voice ordering for Careem Quik</h1>
+  <label>User <select id="user"></select></label>
+  <label>Time <input type="time" id="time" title="leave empty for the real clock"></label>
+  <button class="ghost" id="reset" title="forget all learning and demo orders">Reset demo</button>
+  <span class="muted" id="calls"></span>
+</header>
+<main>
+  <section class="card">
+    <div id="chat"></div>
+    <div class="row">
+      <input id="text" placeholder="Type the transcribed voice note, e.g. بدي الأغراض العادية" autocomplete="off">
+      <button id="send">Send</button>
+    </div>
+    <div class="row">
+      <button class="ghost" id="remind">Send proactive reminder</button>
+      <span class="muted">reply to it:</span>
+      <button class="ghost" data-fb="silence">Silence (no reply)</button>
+    </div>
+    <div class="row" id="family" style="display:none">
+      <span id="famtext"></span>
+      <button data-fam="1">Approve</button><button class="ghost" data-fam="0">Decline</button>
+    </div>
+    <details><summary>Last turn: the 7 steps</summary><pre id="steps">—</pre></details>
+  </section>
+  <section class="card" id="panel"></section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const uid = () => $("user").value, t = () => $("time").value || null;
+const history = {};
+
+async function api(path, body) {
+  const r = await fetch(path, body ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {});
+  const d = await r.json().catch(() => ({error: r.statusText}));
+  if (!r.ok) throw new Error(d.error || d.detail || r.statusText);
+  return d;
+}
+function say(cls, text) {
+  (history[uid()] ||= []).push([cls, text]); draw();
+}
+function draw() {
+  $("chat").innerHTML = (history[uid()] || []).map(([c, x]) => `<div class="msg ${c}">${esc(x)}</div>`).join("");
+  $("chat").scrollTop = 1e9;
+}
+async function busy(fn) {
+  document.querySelectorAll("button").forEach(b => b.disabled = true);
+  try { await fn(); } catch (e) { say("sys bad", "⚠ " + e.message); }
+  finally { document.querySelectorAll("button").forEach(b => b.disabled = false); refresh(); }
+}
+
+async function refresh() {
+  const s = await api(`/api/state/${uid()}` + (t() ? `?time=${t()}` : ""));
+  const a = s.advice, od = a.offer_decision, maxS = Math.max(...Object.values(a.style_scores));
+  $("calls").textContent = `${s.llm_calls} LLM calls this session`;
+  $("family").style.display = s.pending && s.pending.by !== s.user.name ? "flex" : "none";
+  if (s.pending) $("famtext").textContent = `${s.pending.by} gets a confirmation request (${s.pending.cart.total_jod} JOD):`;
+  $("panel").innerHTML = `
+    <h2>Profile</h2><div>${esc(s.user.name)} · ${esc(s.user.name_ar)} · ${s.user.age} · ${esc(s.user.city)}<br>
+      <span class="muted">${s.user.family.map(f => `${esc(f.name)} (${esc(f.relation)}${f.pays ? ", pays" : ""})`).join(", ")}</span></div>
+    <h2>Memory (Mem0)</h2>${s.memory.length ? `<ul>${s.memory.map(m => `<li>${esc(m.fact)} <button class="x" title="forget" data-forget="${m.id}">×</button></li>`).join("")}</ul>` : '<p class="muted">nothing yet</p>'}
+    <h2>Predict · running out</h2>${s.predictions.length ? `<table><tr><th>Item</th><th>Every</th><th>Since</th><th>Due</th></tr>
+      ${s.predictions.map(p => `<tr><td>${esc(p.name_en)}<br><span class="muted">${esc(p.name_ar)}</span></td><td>${p.median_gap_days} d</td><td>${p.days_since} d</td><td class="${p.due_score >= .9 ? "due" : ""}">${p.due_score}</td></tr>`).join("")}</table>`
+      : `<p class="muted">No history: cold start. Similar users buy ${a.suggestions_for_new_user.map(x => esc(x.name_en)).join(", ")}.</p>`}
+    <h2>Decide · reminder style (LinUCB)</h2>${Object.entries(a.style_scores).map(([k, v]) =>
+      `<div>${k === a.style ? "<b>" : ""}${k}${k === a.style ? "</b>" : ""} <span class="bar" style="width:${Math.max(4, 120 * v / maxS)}px"></span> <span class="muted">${v}</span></div>`).join("")}
+    <h2>Decide · offer (uplift)</h2><div>${a.offer ? `<b>Give ${a.offer.discount_pct}% off</b>` : "<b>No offer</b>"} · uplift ${od.uplift} (needs ≥ ${od.threshold})<br><span class="muted">${esc(od.reason)}</span></div>
+    <h2>Cart</h2>${s.cart.lines.length ? `<ul>${s.cart.lines.map(l => `<li>${l.qty} × ${esc(l.name_en)} — ${l.line_jod} JOD</li>`).join("")}</ul><b>${s.cart.total_jod} JOD</b>` : '<p class="muted">empty</p>'}
+    ${s.orders.length ? `<h2>Recent orders</h2><ul>${s.orders.map(o => `<li>${esc(o.ts.replace("T", " "))} · ${o.items.length} items · ${o.total} JOD · by ${esc(o.confirmed_by)}</li>`).join("")}</ul>` : ""}
+    <h2>Guardrails & learning log</h2>${s.events.length ? `<ul>${s.events.map(e => `<li class="${e.ok === false ? "bad" : ""}">${esc(e.ts.slice(11))} ${esc(e.kind)} ${esc(e.check || e.style || e.by || "")} ${esc(e.reply || e.reason || "")}</li>`).join("")}</ul>` : '<p class="muted">nothing yet</p>'}`;
+}
+
+$("send").onclick = () => { const text = $("text").value.trim(); if (!text) return; $("text").value = ""; say("me", text);
+  busy(async () => { const d = await api("/api/chat", {user_id: uid(), text, time: t()}); say("bot", d.reply || "(no reply)");
+    $("steps").textContent = d.steps.map(s => JSON.stringify(s, null, 1)).join("\n"); }); };
+$("text").onkeydown = e => { if (e.key === "Enter") $("send").click(); };
+$("remind").onclick = () => busy(async () => { const d = await api("/api/reminder", {user_id: uid(), time: t()});
+  say(d.reply ? "bot" : "sys", d.reply || `Reminder blocked by guardrail: ${d.blocked}`); });
+document.querySelector("[data-fb]").onclick = () => busy(async () => { const d = await api("/api/feedback", {user_id: uid(), reply: "silence", time: t()});
+  say("sys", d.rewarded ? `No reply: reward 0 for style "${d.rewarded.style}"` : "No open reminder to answer"); });
+$("family").onclick = e => { if (!e.target.dataset.fam) return; busy(async () => {
+  const d = await api("/api/family", {user_id: uid(), approve: e.target.dataset.fam === "1", time: t()});
+  say("sys", d.status === "ordered" ? `Family approved: order ${d.order.order_id} placed (${d.order.total} JOD)` : `Family: ${d.status} ${d.reason || ""}`); }); };
+$("panel").onclick = e => { if (e.target.dataset.forget) busy(() => api("/api/forget", {user_id: uid(), memory_id: e.target.dataset.forget})); };
+$("reset").onclick = () => busy(async () => { await api("/api/reset", {}); Object.keys(history).forEach(k => delete history[k]); draw(); });
+$("user").onchange = () => { draw(); refresh(); };
+$("time").onchange = refresh;
+
+api("/api/users").then(us => { $("user").innerHTML = Object.entries(us).map(([k, u]) => `<option value="${k}">${esc(u.name)} — ${esc(u.name_ar)}</option>`).join(""); refresh(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+[
+ {
+  "item_id": "bread_small",
+  "name_en": "Small Arabic bread (pack)",
+  "name_ar": "خبز عربي صغير",
+  "price_jod": 0.35,
+  "unit": "pack",
+  "category": "bakery",
+  "default_gap_days": 2
+ },
+ {
+  "item_id": "bread_big",
+  "name_en": "Big Arabic bread (pack)",
+  "name_ar": "خبز عربي كبير",
+  "price_jod": 0.5,
+  "unit": "pack",
+  "category": "bakery",
+  "default_gap_days": 2
+ },
+ {
+  "item_id": "milk",
+  "name_en": "Fresh milk 1L",
+  "name_ar": "حليب طازج ١ لتر",
+  "price_jod": 1.1,
+  "unit": "bottle",
+  "category": "dairy",
+  "default_gap_days": 4
+ },
+ {
+  "item_id": "labneh",
+  "name_en": "Labneh 500g",
+  "name_ar": "لبنة ٥٠٠ غرام",
+  "price_jod": 1.6,
+  "unit": "tub",
+  "category": "dairy",
+  "default_gap_days": 6
+ },
+ {
+  "item_id": "laban",
+  "name_en": "Laban 1L",
+  "name_ar": "لبن ١ لتر",
+  "price_jod": 0.9,
+  "unit": "bottle",
+  "category": "dairy",
+  "default_gap_days": 5
+ },
+ {
+  "item_id": "eggs",
+  "name_en": "Eggs (30)",
+  "name_ar": "بيض (٣٠ حبة)",
+  "price_jod": 3.2,
+  "unit": "tray",
+  "category": "dairy",
+  "default_gap_days": 10
+ },
+ {
+  "item_id": "tomatoes",
+  "name_en": "Tomatoes 1kg",
+  "name_ar": "بندورة ١ كيلو",
+  "price_jod": 0.7,
+  "unit": "kg",
+  "category": "vegetables",
+  "default_gap_days": 4
+ },
+ {
+  "item_id": "cucumbers",
+  "name_en": "Cucumbers 1kg",
+  "name_ar": "خيار ١ كيلو",
+  "price_jod": 0.6,
+  "unit": "kg",
+  "category": "vegetables",
+  "default_gap_days": 4
+ },
+ {
+  "item_id": "rice",
+  "name_en": "Rice 5kg",
+  "name_ar": "رز ٥ كيلو",
+  "price_jod": 5.5,
+  "unit": "bag",
+  "category": "pantry",
+  "default_gap_days": 21
+ },
+ {
+  "item_id": "sugar",
+  "name_en": "Sugar 2kg",
+  "name_ar": "سكر ٢ كيلو",
+  "price_jod": 1.4,
+  "unit": "bag",
+  "category": "pantry",
+  "default_gap_days": 25
+ },
+ {
+  "item_id": "sugar_free",
+  "name_en": "Sweetener (sugar-free)",
+  "name_ar": "محلي بدون سكر",
+  "price_jod": 2.25,
+  "unit": "box",
+  "category": "pantry",
+  "default_gap_days": 30
+ },
+ {
+  "item_id": "tea",
+  "name_en": "Black tea 100 bags",
+  "name_ar": "شاي أسود ١٠٠ كيس",
+  "price_jod": 2.1,
+  "unit": "box",
+  "category": "pantry",
+  "default_gap_days": 28
+ },
+ {
+  "item_id": "coffee",
+  "name_en": "Arabic coffee with cardamom 250g",
+  "name_ar": "قهوة عربية بالهيل ٢٥٠ غرام",
+  "price_jod": 3.5,
+  "unit": "pack",
+  "category": "pantry",
+  "default_gap_days": 20
+ },
+ {
+  "item_id": "olive_oil",
+  "name_en": "Olive oil 1L",
+  "name_ar": "زيت زيتون ١ لتر",
+  "price_jod": 6.0,
+  "unit": "bottle",
+  "category": "pantry",
+  "default_gap_days": 35
+ },
+ {
+  "item_id": "lentils",
+  "name_en": "Red lentils 1kg",
+  "name_ar": "عدس أحمر ١ كيلو",
+  "price_jod": 1.3,
+  "unit": "bag",
+  "category": "pantry",
+  "default_gap_days": 30
+ },
+ {
+  "item_id": "hummus",
+  "name_en": "Hummus 400g",
+  "name_ar": "حمص ٤٠٠ غرام",
+  "price_jod": 0.85,
+  "unit": "can",
+  "category": "pantry",
+  "default_gap_days": 14
+ },
+ {
+  "item_id": "chicken",
+  "name_en": "Fresh chicken 1kg",
+  "name_ar": "دجاج طازج ١ كيلو",
+  "price_jod": 3.4,
+  "unit": "kg",
+  "category": "meat",
+  "default_gap_days": 7
+ },
+ {
+  "item_id": "dish_soap",
+  "name_en": "Dish soap 1L",
+  "name_ar": "سائل جلي ١ لتر",
+  "price_jod": 1.5,
+  "unit": "bottle",
+  "category": "home",
+  "default_gap_days": 30
+ },
+ {
+  "item_id": "tissues",
+  "name_en": "Tissues (5 boxes)",
+  "name_ar": "محارم (٥ علب)",
+  "price_jod": 2.4,
+  "unit": "pack",
+  "category": "home",
+  "default_gap_days": 25
+ },
+ {
+  "item_id": "water",
+  "name_en": "Water 6x1.5L",
+  "name_ar": "مي ٦×١.٥ لتر",
+  "price_jod": 1.2,
+  "unit": "pack",
+  "category": "drinks",
+  "default_gap_days": 5
+ }
+]
