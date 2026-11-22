@@ -20,8 +20,10 @@ YES_WORDS = {"yes", "yeah", "yep", "yup", "ok", "okay", "okey", "sure", "confirm
 YES_PHRASES = (("order", "it"), ("go", "ahead"), ("do", "it"), ("of", "course"), ("sounds", "good"), ("please", "do"),
                ("send", "it"), ("why", "not"))
 # "no problem" style phrases say yes even though they hold a negation word
+# "why not" style replies mean yes only when they are the whole reply
+WHOLE_REPLY_YES = (["ليش", "لا"], ["ليش", "لاء"], ["why", "not"])
 NO_PROBLEM = (("ما", "في", "مشكله"), ("مافي", "مشكله"), ("مش", "مشكله"), ("ولا", "يهمك"), ("ما", "عندي", "مانع"),
-              ("ليش", "لا"), ("ليش", "لاء"), ("why", "not"), ("no", "problem"),
+              ("no", "problem"),
               ("not", "a", "problem"))
 NO_WORDS = {"no", "not", "nope", "nah", "never", "dont", "don't", "cancel", "later", "stop", "wait", "hold",
             "لا", "لاء", "مش", "مو", "ما", "بلاش", "بعدين", "الغي", "الغاء", "وقف", "استنى", "مابدي",
@@ -54,12 +56,22 @@ def _drop_phrases(toks, phrases):
 
 
 def says_no(text):
+    if tokens(text) in WHOLE_REPLY_YES:
+        return False
     return any(w in NO_WORDS for w in _drop_phrases(tokens(text), NO_PROBLEM))
+
+
+def blocks_yes(text):
+    """A no / wait word, a condition ("but change...") or a question word: never a yes, whoever judges it."""
+    toks = _drop_phrases(tokens(text), NO_PROBLEM)
+    return says_no(text) or any(w in CONDITIONS or w in QUESTION_WORDS for w in toks)
 
 
 def says_yes(text):
     """Any kind of yes, in any length: a yes word or phrase ("اه والله اطلبه", "sure, go ahead", "ما في مشكلة"),
     unless the message also says no / wait, or asks to change something first ("اه بس شيل الرز")."""
+    if tokens(text) in WHOLE_REPLY_YES and "?" not in text and "؟" not in text:
+        return True
     toks = _drop_phrases(tokens(text), NO_PROBLEM)
     if not toks or any(w in NO_WORDS or w in CONDITIONS or w in QUESTION_WORDS for w in toks):
         return False
