@@ -6,7 +6,14 @@ Setup (once, Windows PowerShell; Python 3.10 recommended):
     ..\\leva-venv\\Scripts\\pip install torch==2.3.0 torchaudio==2.3.0 --index-url https://download.pytorch.org/whl/cpu
         (NVIDIA GPU: use .../whl/cu121 instead of /cpu)
     ..\\leva-venv\\Scripts\\pip install leva-tts soundfile
-    + espeak-ng and ffmpeg on the PATH
+    ..\\leva-venv\\Scripts\\pip install "numpy<2"      <- REQUIRED: leva-tts pulls NumPy 2, torch 2.3 needs NumPy 1
+                                                         (else the warm-up crashes with "Numpy is not available")
+    + espeak-ng and ffmpeg on the PATH   (winget install eSpeak-NG.eSpeak-NG ; winget install Gyan.FFmpeg)
+    No Python 3.10? uv works without installing anything system-wide:  uv venv --seed --python 3.10 ..\\leva-venv
+Windows: download the models ONCE with one thread first (parallel downloads crash with WinError 1314, a symlink
+permission race in huggingface_hub; no admin rights needed this way), ~6 GB:
+    ..\\leva-venv\\Scripts\\python -c "from huggingface_hub import snapshot_download; snapshot_download('tts-hub/XTTS-v2', max_workers=1)"
+    set HF_HUB_DISABLE_SYMLINKS_WARNING=1   (then the first server start downloads the Leva checkpoint)
 Run (keep this terminal open during the demo):
     ..\\leva-venv\\Scripts\\python stt\\leva_server.py            # http://127.0.0.1:8790
 Then in ai-core/.env:  TTS_PROVIDER=func   TTS_FUNC=stt.leva:tts
