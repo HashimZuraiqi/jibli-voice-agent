@@ -257,3 +257,11 @@ def test_orders_text_handles_mcp_baskets_and_orders(tmp_path):
     assert tools.family_checkout("um_khaled", "Khaled", NOW)["status"] == "ordered"
     text = Brain.orders_text(me, "um_khaled")
     assert "waiting" not in text and "groceries placed 2026-11-22 12:00, approved by Khaled: Quik basket (45.5" in text
+
+
+def test_single_item_basket_uses_basket_total_not_item_price():
+    one = {"basket": {"id": 7, "items": [{"title_localized": "Milk", "count": 1, "price": {"total": 13.5}}]},
+           "price": {"total": 19.0}}
+    assert CareemMCPTools.total(one) == 19.0
+    assert CareemMCPTools.total({"price": {"price": {"total": 45.5}}}) == 45.5
+    assert CareemMCPTools.total({"total": 4.25}) == 4.25

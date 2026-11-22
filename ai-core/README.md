@@ -31,6 +31,19 @@ Memory runs on Amazon Bedrock AgentCore Memory. Backup: `MEMORY_PROVIDER=mem0` i
 5. Set *Time* to 23:00 and send a reminder → blocked by quiet hours. Send two reminders at 10:00 → the second is blocked.
 6. **Hajjeh Fatima** (new user) — cold start: no history, suggestions from similar users, and uplift gives her an offer.
 
+## Voice page and family page (demo)
+
+- **Elder:** http://127.0.0.1:8000/voice/um_khaled — one big mic button (tap to talk, tap to stop), the reply is
+  spoken back, big نعم / لا when an order waits for her, and a text box ("speak it or type it, same agent").
+- **Family:** http://127.0.0.1:8000/family/um_khaled — open on Khaled's phone: the basket and total waiting for
+  approval, وافق / رفض. When the agent asks her, she OR Khaled can confirm, whoever is first (placed once).
+- Speech: `STT_PROVIDER` / `TTS_PROVIDER` in `.env` (see `.env.example`). Anas's functions plug in without code changes:
+  `STT_PROVIDER=func`, `STT_FUNC=stt.anas:stt` (`stt(audio_bytes) -> text`), `TTS_PROVIDER=func`,
+  `TTS_FUNC=stt.anas:tts` (`tts(text) -> audio_bytes`). Without them: local Whisper (`pip install openai-whisper`
+  + ffmpeg) and the browser's own Arabic voice. The recording is never stored.
+- The phone must reach the laptop: use the laptop's LAN IP (`--host 0.0.0.0`). Browsers only allow the mic on
+  http://localhost or https, so run the elder page on the laptop itself.
+
 ## Real Careem MCP
 
 - **Sandbox (build + test, never orders):** build it once from https://builders.careem.com/sandbox/careem-mcp-sandbox.zip
