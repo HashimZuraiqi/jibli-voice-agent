@@ -573,7 +573,9 @@ async function handle(promise, shown) {
     if (r.transcript && !shown) add("me", r.transcript);
     add("bot", r.reply); play(r);
     if (r.waiting) { VIEW = r.waiting; renderBasket(); }
-    if (wasWaiting && VIEW && !VIEW.waiting && VIEW.last && VIEW.last.kind === "careem_order") setTimeout(() => ordered(VIEW.last.by), 900);
+    // placed: a groceries-path event (kind careem_order) or an all-services order record (mcp-all: ok + service, e.g. Faris's ride)
+    const last = VIEW && VIEW.last, placed = last && (last.kind === "careem_order" || (last.ok && last.service));
+    if (wasWaiting && VIEW && !VIEW.waiting && placed) setTimeout(() => ordered(last.by || last.confirmed_by), 900);
   } catch (e) { add("note err", "⚠️ " + e.message); }
   finally { stopThinking(); setBusy(false); }
 }
@@ -622,7 +624,8 @@ function renderBasket() {
   if (!v.waiting) { if (!box.querySelector(".done")) box.innerHTML = ""; return; }
   const items = (v.items || []).map(i => `<div class="row"><span>${esc(i.name)} <b>× ${ar(i.qty)}</b></span><span>${i.price != null ? esc(money(i.price, v.currency)) : ""}</span></div>`).join("")
                 || (v.summary ? `<div class="row">${esc(v.summary)}</div>` : "");
-  const addr = v.address || (v.summary && /عنوان|البيت|address|Home/i.test(v.summary) ? v.summary : "عنوانك المحفوظ · البيت");
+  // the server sends no address; guessing it from the summary repeated the whole English order summary after 📍 (mcp-all)
+  const addr = v.address || "عنوانك المحفوظ · البيت";
   const mine = v.asked_user && (!SETTINGS || SETTINGS.confirm_mode !== "family");
   // a Careem ride (Faris): no basket, no delivery address, no "Why?" link, no "or <confirmer>" line when he confirms himself
   const ride = v.tool === "rides_request", leg = ride && /(\w+)\s*->\s*(\w+)/.exec(v.summary || "");
@@ -696,7 +699,9 @@ async function enterLock() {
   if (reminderLoading) return; reminderLoading = true;
   try {
     const r = await (await post("/api/reminder", {user_id:USER})).json();
-    reminderRide = r.ride || null;
+    // blocked (already reminded today) answers have no "ride", but if a usual ride is due now, today's reminder was that
+    // ride: keep its title instead of falling back to the grocery "running out" title (it said «حمص قرّب يخلص» for Faris)
+    reminderRide = r.ride || (!r.reply && r.advice && r.advice.usual_ride) || null;
     if (r.reply) reminderText = r.reply;
     else {  // blocked (already reminded today / quiet hours): show the last sentence Jibli said, or the live due items
       const w = await loadWhy().catch(() => null);
@@ -864,6 +869,7 @@ function enterTrack() {
   const place = k => { const [x, y] = pts[Math.min(pts.length - 1, k)], w = map.clientWidth / 358, h = map.clientHeight / 180;
                        cap.style.left = `${x * w - 17}px`; cap.style.top = `${y * h - 17}px`; };
   clearInterval(trackTimer); place(0); steps.forEach(s => s.classList.remove("on"));
+  $("eta").textContent = `${String(etaMin).padStart(2, "0")}:00`;  // start value now (04:00 ride), not the 20:00 default for 250 ms
   trackTimer = setInterval(() => {
     const s = (Date.now() - t0) / 1000, k = Math.min(3, Math.floor(s / (total / 3)));
     steps.forEach((li, i) => li.classList.toggle("on", i <= k));
