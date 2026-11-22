@@ -48,6 +48,22 @@ TO_JOD = {"JOD": 1.0, "JD": 1.0, "AED": 0.193, "SAR": 0.189, "USD": 0.709}
 LAT_KEYS, LNG_KEYS = ("lat", "latitude"), ("lng", "lon", "long", "longitude")
 
 
+def is_production(url=None):
+    """True when talking to Careem's real server (real account, real orders)."""
+    url = os.getenv("CAREEM_MCP_URL", "") if url is None else url
+    return isinstance(url, str) and "careemapis.com" in url
+
+
+def checkout_allowed():
+    """CAREEM_ALLOW_CHECKOUT=true|false. Unset: off on the real Careem server, on for the local sandbox."""
+    value = os.getenv("CAREEM_ALLOW_CHECKOUT", "").strip().lower()
+    return value == "true" if value else not is_production()
+
+
+CHECKOUT_OFF = ("checkout is switched off (CAREEM_ALLOW_CHECKOUT): the real cart and price are ready, nothing was "
+                "paid; the order can be finished in the Careem app")
+
+
 class MCPConnector:
     """Minimal sync wrapper around the MCP Python SDK: one short connection per call (simple and robust for a demo)."""
 
@@ -365,6 +381,10 @@ class CareemMCPTools:
         args, missing = self.checkout_args(uid)
         if missing:
             return {"status": "blocked", "error": f"checkout needs {missing}, not seen in earlier Careem calls"}
+        if not checkout_allowed():  # real account: build the cart, never pay
+            self.store.state["pending"].pop(uid, None)
+            self.store.log(uid, "guardrail", now, check="checkout", ok=False, reason="checkout switched off")
+            return {"status": "blocked", "error": CHECKOUT_OFF}
         try:
             result = self.mcp.call(CHECKOUT, args)
         except Exception as e:  # never retry checkout blindly: it may have gone through
@@ -397,7 +417,8 @@ def make_tools(store, memory, places=None):
         if provider == "mcp-all":
             from .careem import CareemTools
             from .personalization import services
-            return CareemTools(store, memory, places or services.load()["places"])
+            # the sandbox's saved places belong to its test account; on the real server user_info gives the user's own
+            return CareemTools(store, memory, {} if is_production() else (places or services.load()["places"]))
         return CareemMCPTools(store, memory, local)
     except Exception as e:
         print(f"[careem] MCP unavailable, using mock tools: {type(e).__name__}: {e}")

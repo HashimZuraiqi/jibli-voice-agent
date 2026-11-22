@@ -21,6 +21,8 @@ SEED_FACTS = {
     "abu_sami": ["His daughter Rana pays and confirms the orders",
                  "Likes his Arabic coffee with cardamom"],
     "new_user": ["Her grandson Omar pays and confirms the orders"],
+    "lina": ["Lina pays and confirms her own orders",
+             "Usually takes a Careem Go to work in the morning"],
 }
 
 
