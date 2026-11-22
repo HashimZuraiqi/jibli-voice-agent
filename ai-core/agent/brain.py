@@ -6,6 +6,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from . import consent
 from .personalization import guardrails as g
 from .store import parse_ts
 
@@ -165,7 +166,8 @@ class Brain:
         open_reminder = [e for e in self.store.events(user_id, "reminder") if "reply" not in e]
         note = ""
         if open_reminder:  # the user's answer to our reminder is the bandit's reward
-            reply = "no" if g.says_no(text) else "yes" if g.says_yes(text) else None
+            verdict = consent.judge(self.llm, text, "the reminder about " + self.reminder_items(advice))
+            reply = verdict if verdict in ("yes", "no") else None
             if reply:
                 self.layer.feedback(user_id, reply, now)
                 steps.append({"step": "7 learn (reward)", "reminder_style": open_reminder[-1]["style"], "reply": reply})
@@ -176,18 +178,30 @@ class Brain:
         pending = self.store.state["pending"].get(user_id)
         fresh = pending and isinstance(pending.get("turn"), int) and 0 < turn - pending["turn"] <= YES_WITHIN_MESSAGES \
             and now - parse_ts(pending["ts"]) <= YES_WITHIN_TIME
-        if pending and pending.get("by") == self.store.users[user_id]["name"] and fresh and g.says_yes(text):
-            self.progress(user_id, "tool", name="place_order")
-            # any kind of yes to the order waiting for the user: place it now (still through every guardrail);
-            # the AI only tells them how it went, so it cannot forget to order or ask for yet another yes
-            result = self.tools.run("place_order", {"confirmed_by": "user"},
-                                    {"user_id": user_id, "now": now, "text": text, "turn": turn})
-            steps.append({"step": "6 confirm", "tool": "place_order", "args": {"confirmed_by": "user", "auto": True},
-                          "result": result})
-            note += ("\nThe user just said yes, so the system already placed the order. Result: "
-                     + json.dumps(result, ensure_ascii=False, default=str)[:1500]
-                     + "\nTell them the outcome in one or two sentences. Do not ask for confirmation again and do not "
-                       "call request_confirmation or place_order for it.")
+        if pending and pending.get("by") == self.store.users[user_id]["name"] and fresh:
+            # Claude reads what the reply MEANS for the waiting order (any wording, Arabic, English or Arabizi)
+            verdict = consent.judge(self.llm, text, pending.get("summary") or "the order")
+            steps.append({"step": "6 consent", "verdict": verdict})
+            if verdict == "yes":
+                self.progress(user_id, "tool", name="place_order")
+                # place it now, still through every guardrail; the guardrail's own word check gets a plain "yes"
+                # because consent.judge already decided it, and judge never says yes when the reply has a no word
+                result = self.tools.run("place_order", {"confirmed_by": "user"},
+                                        {"user_id": user_id, "now": now, "text": "yes", "turn": turn})
+                steps.append({"step": "6 confirm", "tool": "place_order", "args": {"confirmed_by": "user", "auto": True},
+                              "result": result})
+                note += ("\nThe user agreed, so the system already placed the order. Result: "
+                         + json.dumps(result, ensure_ascii=False, default=str)[:1500]
+                         + "\nTell them the outcome in one or two sentences. Do not ask for confirmation again and do "
+                           "not call request_confirmation or place_order for it.")
+            elif verdict == "no":
+                self.store.state["pending"].pop(user_id, None)
+                self.store.log(user_id, "confirmation_declined", now, by=self.store.users[user_id]["name"])
+                note += "\nThe user said no to the waiting order, so it was cancelled. Acknowledge it kindly in one sentence."
+            else:
+                note += ("\nThe user's reply does not clearly say yes or no to the waiting order (" + (pending.get("summary") or "")
+                         + "). Answer anything they asked, then ask once, short and clear, whether to go ahead "
+                           "(in Arabic: \"بدك أكمّل الطلب؟\"). Do not place the order.")
         steps.append({"step": "3 advise", "running_out": [p["item_id"] for p in advice["running_out"]],
                       "style": advice["style"], "offer": advice["offer"], "offer_decision": advice["offer_decision"],
                       "ms": advise_ms})

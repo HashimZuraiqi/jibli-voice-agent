@@ -276,3 +276,41 @@ def test_a_late_yes_does_not_place_the_order(tools):
     late = NOW + __import__("datetime").timedelta(hours=2)
     out = brain.handle("um_khaled", "اه اطلبه", late)                      # too late: no order
     assert not [s for s in out["steps"] if s.get("tool") == "place_order"] and tools.store.state["pending"]
+
+
+def test_meaning_yes_places_and_no_cancels(tools):
+    from agent.brain import Brain
+    from agent.llm import Message
+
+    class LLM:
+        def __init__(self): self.answer = "YES"
+        def chat(self, messages, tools=None):
+            first = messages[0]["content"] if messages else ""
+            return Message(self.answer if "decide whether a customer agreed" in first else "ok"), {"model": "test"}
+
+    class Layer:
+        def advise(self, user_id, now):
+            return {"running_out": [], "cold_start": False, "suggestions_for_new_user": [], "usual_ride": None,
+                    "usual_box": None, "style": "short", "style_hint": "", "style_scores": {}, "offer": None,
+                    "offer_decision": {}}
+
+    class Mem:
+        def seed(self, u): pass
+        def recall(self, u, t): return []
+        def learn(self, u, t): return True, "ok"
+
+    def ask(turn):
+        q = tools.run("rides_get_quote", {"pickup": "Home", "dropoff": "Work", "product": "Go"}, ctx(turn))
+        tools.run("request_confirmation", {"by": "user", "checkout_tool": "rides_request", "total": q["quotes"][0]["price_aed"],
+                                           "currency": "AED", "summary": "Go to work",
+                                           "checkout_args": {"quote_id": q["quote_id"], "product": "Go"}}, ctx(turn))
+
+    llm = LLM()
+    brain = Brain(tools.store, Mem(), Layer(), tools, llm)
+    ask(0)
+    out = brain.handle("um_khaled", "على بركة الله", NOW)          # no yes word: the meaning decides
+    assert [s for s in out["steps"] if s.get("tool") == "place_order"][0]["result"]["status"] == "ordered"
+    ask(1)
+    llm.answer = "NO"
+    brain.handle("um_khaled", "خلص مش لازم", NOW)
+    assert not tools.store.state["pending"]                        # a clear no cancels the waiting order
