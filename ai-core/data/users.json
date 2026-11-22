@@ -1,0 +1,62 @@
+{
+ "um_khaled": {
+  "name": "Um Khaled",
+  "name_ar": "أم خالد",
+  "age": 68,
+  "lang": "ar",
+  "city": "Amman",
+  "family": [
+   {
+    "name": "Khaled",
+    "relation": "son",
+    "pays": true,
+    "can_confirm": true
+   },
+   {
+    "name": "Abu Khaled",
+    "relation": "husband",
+    "pays": false,
+    "can_confirm": false
+   }
+  ],
+  "confirm_by": "Khaled",
+  "usual_hour": 9,
+  "price_sensitivity": 0.7
+ },
+ "abu_sami": {
+  "name": "Abu Sami",
+  "name_ar": "أبو سامي",
+  "age": 74,
+  "lang": "mix",
+  "city": "Irbid",
+  "family": [
+   {
+    "name": "Rana",
+    "relation": "daughter",
+    "pays": true,
+    "can_confirm": true
+   }
+  ],
+  "confirm_by": "Rana",
+  "usual_hour": 17,
+  "price_sensitivity": 0.3
+ },
+ "new_user": {
+  "name": "Hajjeh Fatima",
+  "name_ar": "الحجة فاطمة",
+  "age": 71,
+  "lang": "ar",
+  "city": "Zarqa",
+  "family": [
+   {
+    "name": "Omar",
+    "relation": "grandson",
+    "pays": true,
+    "can_confirm": true
+   }
+  ],
+  "confirm_by": "Omar",
+  "usual_hour": 10,
+  "price_sensitivity": 0.6
+ }
+}

@@ -1,0 +1,3165 @@
+[
+ {
+  "order_id": "um_khaled-000",
+  "user_id": "um_khaled",
+  "ts": "2026-07-25T09:30",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "labneh",
+    "qty": 1
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 3.5,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-001",
+  "user_id": "um_khaled",
+  "ts": "2026-07-26T09:58",
+  "items": [
+   {
+    "item_id": "milk",
+    "qty": 1
+   }
+  ],
+  "total": 1.1,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-002",
+  "user_id": "um_khaled",
+  "ts": "2026-07-27T09:41",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-003",
+  "user_id": "um_khaled",
+  "ts": "2026-07-28T09:22",
+  "items": [
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.9,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-004",
+  "user_id": "um_khaled",
+  "ts": "2026-07-29T09:51",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-005",
+  "user_id": "um_khaled",
+  "ts": "2026-07-30T09:41",
+  "items": [
+   {
+    "item_id": "milk",
+    "qty": 1
+   }
+  ],
+  "total": 1.1,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-006",
+  "user_id": "um_khaled",
+  "ts": "2026-07-31T09:05",
+  "items": [
+   {
+    "item_id": "labneh",
+    "qty": 1
+   },
+   {
+    "item_id": "eggs",
+    "qty": 1
+   }
+  ],
+  "total": 4.8,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-007",
+  "user_id": "um_khaled",
+  "ts": "2026-08-01T09:53",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 1.4,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-008",
+  "user_id": "um_khaled",
+  "ts": "2026-08-02T09:42",
+  "items": [
+   {
+    "item_id": "sugar_free",
+    "qty": 1
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 3.45,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-009",
+  "user_id": "um_khaled",
+  "ts": "2026-08-03T09:07",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "milk",
+    "qty": 1
+   }
+  ],
+  "total": 1.8,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-010",
+  "user_id": "um_khaled",
+  "ts": "2026-08-04T09:58",
+  "items": [
+   {
+    "item_id": "tea",
+    "qty": 1
+   }
+  ],
+  "total": 2.1,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-011",
+  "user_id": "um_khaled",
+  "ts": "2026-08-05T09:24",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-012",
+  "user_id": "um_khaled",
+  "ts": "2026-08-06T09:50",
+  "items": [
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 3.0,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-013",
+  "user_id": "um_khaled",
+  "ts": "2026-08-07T09:45",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "labneh",
+    "qty": 1
+   }
+  ],
+  "total": 2.3,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-014",
+  "user_id": "um_khaled",
+  "ts": "2026-08-09T09:48",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "rice",
+    "qty": 1
+   }
+  ],
+  "total": 6.2,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-015",
+  "user_id": "um_khaled",
+  "ts": "2026-08-10T09:12",
+  "items": [
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 1.8,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-016",
+  "user_id": "um_khaled",
+  "ts": "2026-08-11T09:30",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "labneh",
+    "qty": 1
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 3.5,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-017",
+  "user_id": "um_khaled",
+  "ts": "2026-08-12T09:56",
+  "items": [
+   {
+    "item_id": "eggs",
+    "qty": 1
+   }
+  ],
+  "total": 3.2,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-018",
+  "user_id": "um_khaled",
+  "ts": "2026-08-13T09:11",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-019",
+  "user_id": "um_khaled",
+  "ts": "2026-08-14T09:27",
+  "items": [
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 1.8,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-020",
+  "user_id": "um_khaled",
+  "ts": "2026-08-15T09:50",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.9,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-021",
+  "user_id": "um_khaled",
+  "ts": "2026-08-17T09:40",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "labneh",
+    "qty": 1
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 3.0,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-022",
+  "user_id": "um_khaled",
+  "ts": "2026-08-18T09:21",
+  "items": [
+   {
+    "item_id": "milk",
+    "qty": 1
+   }
+  ],
+  "total": 1.1,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-023",
+  "user_id": "um_khaled",
+  "ts": "2026-08-19T09:05",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.9,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-024",
+  "user_id": "um_khaled",
+  "ts": "2026-08-21T09:51",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-025",
+  "user_id": "um_khaled",
+  "ts": "2026-08-22T09:46",
+  "items": [
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 1.8,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-026",
+  "user_id": "um_khaled",
+  "ts": "2026-08-23T09:25",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-027",
+  "user_id": "um_khaled",
+  "ts": "2026-08-24T09:29",
+  "items": [
+   {
+    "item_id": "labneh",
+    "qty": 1
+   },
+   {
+    "item_id": "eggs",
+    "qty": 1
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 6.0,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-028",
+  "user_id": "um_khaled",
+  "ts": "2026-08-25T09:25",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   },
+   {
+    "item_id": "olive_oil",
+    "qty": 1
+   }
+  ],
+  "total": 7.4,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-029",
+  "user_id": "um_khaled",
+  "ts": "2026-08-27T09:47",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "milk",
+    "qty": 1
+   }
+  ],
+  "total": 1.8,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-030",
+  "user_id": "um_khaled",
+  "ts": "2026-08-29T09:05",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "labneh",
+    "qty": 1
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 4.2,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-031",
+  "user_id": "um_khaled",
+  "ts": "2026-08-31T09:46",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "rice",
+    "qty": 1
+   }
+  ],
+  "total": 6.2,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-032",
+  "user_id": "um_khaled",
+  "ts": "2026-09-01T09:10",
+  "items": [
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 1.8,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-033",
+  "user_id": "um_khaled",
+  "ts": "2026-09-02T09:10",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "tea",
+    "qty": 1
+   }
+  ],
+  "total": 2.8,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-034",
+  "user_id": "um_khaled",
+  "ts": "2026-09-03T09:08",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-035",
+  "user_id": "um_khaled",
+  "ts": "2026-09-04T09:01",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-036",
+  "user_id": "um_khaled",
+  "ts": "2026-09-05T09:09",
+  "items": [
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "labneh",
+    "qty": 1
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   },
+   {
+    "item_id": "eggs",
+    "qty": 1
+   }
+  ],
+  "total": 6.6,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-037",
+  "user_id": "um_khaled",
+  "ts": "2026-09-06T09:37",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-038",
+  "user_id": "um_khaled",
+  "ts": "2026-09-07T09:57",
+  "items": [
+   {
+    "item_id": "sugar_free",
+    "qty": 1
+   }
+  ],
+  "total": 2.25,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-039",
+  "user_id": "um_khaled",
+  "ts": "2026-09-08T09:29",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.9,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-040",
+  "user_id": "um_khaled",
+  "ts": "2026-09-09T09:51",
+  "items": [
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 1.8,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-041",
+  "user_id": "um_khaled",
+  "ts": "2026-09-10T09:41",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-042",
+  "user_id": "um_khaled",
+  "ts": "2026-09-11T09:09",
+  "items": [
+   {
+    "item_id": "labneh",
+    "qty": 1
+   }
+  ],
+  "total": 1.6,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-043",
+  "user_id": "um_khaled",
+  "ts": "2026-09-12T09:39",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 1.4,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-044",
+  "user_id": "um_khaled",
+  "ts": "2026-09-14T09:52",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 3.0,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-045",
+  "user_id": "um_khaled",
+  "ts": "2026-09-15T09:38",
+  "items": [
+   {
+    "item_id": "eggs",
+    "qty": 1
+   }
+  ],
+  "total": 3.2,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-046",
+  "user_id": "um_khaled",
+  "ts": "2026-09-16T09:30",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 1.4,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-047",
+  "user_id": "um_khaled",
+  "ts": "2026-09-17T09:42",
+  "items": [
+   {
+    "item_id": "labneh",
+    "qty": 1
+   }
+  ],
+  "total": 1.6,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-048",
+  "user_id": "um_khaled",
+  "ts": "2026-09-18T09:59",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "rice",
+    "qty": 1
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 8.5,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-049",
+  "user_id": "um_khaled",
+  "ts": "2026-09-20T09:22",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-050",
+  "user_id": "um_khaled",
+  "ts": "2026-09-21T09:09",
+  "items": [
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 3.0,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-051",
+  "user_id": "um_khaled",
+  "ts": "2026-09-22T09:35",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-052",
+  "user_id": "um_khaled",
+  "ts": "2026-09-23T09:35",
+  "items": [
+   {
+    "item_id": "labneh",
+    "qty": 1
+   }
+  ],
+  "total": 1.6,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-053",
+  "user_id": "um_khaled",
+  "ts": "2026-09-24T09:08",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "eggs",
+    "qty": 1
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 5.1,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-054",
+  "user_id": "um_khaled",
+  "ts": "2026-09-25T09:01",
+  "items": [
+   {
+    "item_id": "milk",
+    "qty": 1
+   }
+  ],
+  "total": 1.1,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-055",
+  "user_id": "um_khaled",
+  "ts": "2026-09-26T09:00",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "tea",
+    "qty": 1
+   }
+  ],
+  "total": 2.8,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-056",
+  "user_id": "um_khaled",
+  "ts": "2026-09-27T09:51",
+  "items": [
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-057",
+  "user_id": "um_khaled",
+  "ts": "2026-09-28T09:46",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "milk",
+    "qty": 1
+   }
+  ],
+  "total": 1.8,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-058",
+  "user_id": "um_khaled",
+  "ts": "2026-09-30T09:41",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "labneh",
+    "qty": 1
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 3.5,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-059",
+  "user_id": "um_khaled",
+  "ts": "2026-10-01T09:06",
+  "items": [
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 1.8,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-060",
+  "user_id": "um_khaled",
+  "ts": "2026-10-02T09:33",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "olive_oil",
+    "qty": 1
+   }
+  ],
+  "total": 6.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-061",
+  "user_id": "um_khaled",
+  "ts": "2026-10-04T09:47",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "eggs",
+    "qty": 1
+   },
+   {
+    "item_id": "sugar_free",
+    "qty": 1
+   }
+  ],
+  "total": 6.15,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-062",
+  "user_id": "um_khaled",
+  "ts": "2026-10-05T09:59",
+  "items": [
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-063",
+  "user_id": "um_khaled",
+  "ts": "2026-10-06T09:08",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "labneh",
+    "qty": 1
+   }
+  ],
+  "total": 3.4,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-064",
+  "user_id": "um_khaled",
+  "ts": "2026-10-07T09:27",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.9,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-065",
+  "user_id": "um_khaled",
+  "ts": "2026-10-09T09:55",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 2.5,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-066",
+  "user_id": "um_khaled",
+  "ts": "2026-10-10T09:12",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-067",
+  "user_id": "um_khaled",
+  "ts": "2026-10-12T09:52",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.9,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-068",
+  "user_id": "um_khaled",
+  "ts": "2026-10-13T09:55",
+  "items": [
+   {
+    "item_id": "labneh",
+    "qty": 1
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   },
+   {
+    "item_id": "rice",
+    "qty": 1
+   }
+  ],
+  "total": 7.8,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-069",
+  "user_id": "um_khaled",
+  "ts": "2026-10-14T09:13",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "milk",
+    "qty": 1
+   }
+  ],
+  "total": 1.8,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-070",
+  "user_id": "um_khaled",
+  "ts": "2026-10-15T09:01",
+  "items": [
+   {
+    "item_id": "eggs",
+    "qty": 1
+   }
+  ],
+  "total": 3.2,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-071",
+  "user_id": "um_khaled",
+  "ts": "2026-10-16T09:16",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 1.4,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-072",
+  "user_id": "um_khaled",
+  "ts": "2026-10-17T09:13",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-073",
+  "user_id": "um_khaled",
+  "ts": "2026-10-18T09:18",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "labneh",
+    "qty": 1
+   }
+  ],
+  "total": 3.4,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-074",
+  "user_id": "um_khaled",
+  "ts": "2026-10-20T09:32",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 1.4,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-075",
+  "user_id": "um_khaled",
+  "ts": "2026-10-22T09:15",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 3.0,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-076",
+  "user_id": "um_khaled",
+  "ts": "2026-10-23T09:48",
+  "items": [
+   {
+    "item_id": "tea",
+    "qty": 1
+   }
+  ],
+  "total": 2.1,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-077",
+  "user_id": "um_khaled",
+  "ts": "2026-10-24T09:37",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "labneh",
+    "qty": 1
+   }
+  ],
+  "total": 2.3,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-078",
+  "user_id": "um_khaled",
+  "ts": "2026-10-25T09:20",
+  "items": [
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-079",
+  "user_id": "um_khaled",
+  "ts": "2026-10-26T09:16",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "eggs",
+    "qty": 1
+   }
+  ],
+  "total": 5.0,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-080",
+  "user_id": "um_khaled",
+  "ts": "2026-10-27T09:34",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-081",
+  "user_id": "um_khaled",
+  "ts": "2026-10-28T09:26",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-082",
+  "user_id": "um_khaled",
+  "ts": "2026-10-29T09:53",
+  "items": [
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-083",
+  "user_id": "um_khaled",
+  "ts": "2026-10-30T09:08",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-084",
+  "user_id": "um_khaled",
+  "ts": "2026-10-31T09:03",
+  "items": [
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "labneh",
+    "qty": 1
+   },
+   {
+    "item_id": "sugar_free",
+    "qty": 1
+   }
+  ],
+  "total": 4.95,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-085",
+  "user_id": "um_khaled",
+  "ts": "2026-11-01T09:58",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.9,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-086",
+  "user_id": "um_khaled",
+  "ts": "2026-11-02T09:47",
+  "items": [
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-087",
+  "user_id": "um_khaled",
+  "ts": "2026-11-03T09:22",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "milk",
+    "qty": 1
+   }
+  ],
+  "total": 1.8,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-088",
+  "user_id": "um_khaled",
+  "ts": "2026-11-05T09:57",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "eggs",
+    "qty": 1
+   }
+  ],
+  "total": 3.9,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-089",
+  "user_id": "um_khaled",
+  "ts": "2026-11-06T09:29",
+  "items": [
+   {
+    "item_id": "labneh",
+    "qty": 1
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 3.5,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-090",
+  "user_id": "um_khaled",
+  "ts": "2026-11-07T09:42",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-091",
+  "user_id": "um_khaled",
+  "ts": "2026-11-08T09:37",
+  "items": [
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "rice",
+    "qty": 1
+   }
+  ],
+  "total": 6.6,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-092",
+  "user_id": "um_khaled",
+  "ts": "2026-11-09T09:52",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 1.4,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-093",
+  "user_id": "um_khaled",
+  "ts": "2026-11-11T09:57",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "labneh",
+    "qty": 1
+   }
+  ],
+  "total": 2.3,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-094",
+  "user_id": "um_khaled",
+  "ts": "2026-11-12T09:33",
+  "items": [
+   {
+    "item_id": "milk",
+    "qty": 1
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 2.3,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-095",
+  "user_id": "um_khaled",
+  "ts": "2026-11-13T09:26",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-096",
+  "user_id": "um_khaled",
+  "ts": "2026-11-14T09:52",
+  "items": [
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-097",
+  "user_id": "um_khaled",
+  "ts": "2026-11-15T09:58",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "olive_oil",
+    "qty": 1
+   }
+  ],
+  "total": 6.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-098",
+  "user_id": "um_khaled",
+  "ts": "2026-11-16T09:56",
+  "items": [
+   {
+    "item_id": "milk",
+    "qty": 1
+   }
+  ],
+  "total": 1.1,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-099",
+  "user_id": "um_khaled",
+  "ts": "2026-11-17T09:32",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   }
+  ],
+  "total": 0.7,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-100",
+  "user_id": "um_khaled",
+  "ts": "2026-11-18T09:08",
+  "items": [
+   {
+    "item_id": "labneh",
+    "qty": 1
+   },
+   {
+    "item_id": "eggs",
+    "qty": 1
+   },
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 6.0,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "um_khaled-101",
+  "user_id": "um_khaled",
+  "ts": "2026-11-19T09:34",
+  "items": [
+   {
+    "item_id": "bread_small",
+    "qty": 2
+   },
+   {
+    "item_id": "tomatoes",
+    "qty": 1
+   }
+  ],
+  "total": 1.4,
+  "confirmed_by": "Khaled"
+ },
+ {
+  "order_id": "abu_sami-000",
+  "user_id": "abu_sami",
+  "ts": "2026-07-24T17:11",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-001",
+  "user_id": "abu_sami",
+  "ts": "2026-07-25T17:10",
+  "items": [
+   {
+    "item_id": "laban",
+    "qty": 1
+   },
+   {
+    "item_id": "chicken",
+    "qty": 1
+   }
+  ],
+  "total": 4.3,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-002",
+  "user_id": "abu_sami",
+  "ts": "2026-07-26T17:17",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "coffee",
+    "qty": 1
+   }
+  ],
+  "total": 4.0,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-003",
+  "user_id": "abu_sami",
+  "ts": "2026-07-27T17:28",
+  "items": [
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 0.6,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-004",
+  "user_id": "abu_sami",
+  "ts": "2026-07-28T17:00",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-005",
+  "user_id": "abu_sami",
+  "ts": "2026-07-29T17:16",
+  "items": [
+   {
+    "item_id": "laban",
+    "qty": 1
+   }
+  ],
+  "total": 0.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-006",
+  "user_id": "abu_sami",
+  "ts": "2026-07-30T17:23",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-007",
+  "user_id": "abu_sami",
+  "ts": "2026-08-01T17:21",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "laban",
+    "qty": 1
+   },
+   {
+    "item_id": "chicken",
+    "qty": 1
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 5.4,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-008",
+  "user_id": "abu_sami",
+  "ts": "2026-08-03T17:35",
+  "items": [
+   {
+    "item_id": "hummus",
+    "qty": 2
+   },
+   {
+    "item_id": "sugar",
+    "qty": 1
+   }
+  ],
+  "total": 3.1,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-009",
+  "user_id": "abu_sami",
+  "ts": "2026-08-04T17:20",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-010",
+  "user_id": "abu_sami",
+  "ts": "2026-08-05T17:15",
+  "items": [
+   {
+    "item_id": "laban",
+    "qty": 1
+   }
+  ],
+  "total": 0.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-011",
+  "user_id": "abu_sami",
+  "ts": "2026-08-06T17:02",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-012",
+  "user_id": "abu_sami",
+  "ts": "2026-08-07T17:56",
+  "items": [
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 0.6,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-013",
+  "user_id": "abu_sami",
+  "ts": "2026-08-08T17:19",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-014",
+  "user_id": "abu_sami",
+  "ts": "2026-08-09T17:13",
+  "items": [
+   {
+    "item_id": "chicken",
+    "qty": 1
+   }
+  ],
+  "total": 3.4,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-015",
+  "user_id": "abu_sami",
+  "ts": "2026-08-10T17:22",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "laban",
+    "qty": 1
+   }
+  ],
+  "total": 1.4,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-016",
+  "user_id": "abu_sami",
+  "ts": "2026-08-12T17:11",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-017",
+  "user_id": "abu_sami",
+  "ts": "2026-08-13T17:00",
+  "items": [
+   {
+    "item_id": "hummus",
+    "qty": 2
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 2.3,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-018",
+  "user_id": "abu_sami",
+  "ts": "2026-08-14T17:21",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "tissues",
+    "qty": 1
+   }
+  ],
+  "total": 2.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-019",
+  "user_id": "abu_sami",
+  "ts": "2026-08-15T17:24",
+  "items": [
+   {
+    "item_id": "laban",
+    "qty": 1
+   }
+  ],
+  "total": 0.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-020",
+  "user_id": "abu_sami",
+  "ts": "2026-08-16T17:05",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "coffee",
+    "qty": 1
+   },
+   {
+    "item_id": "chicken",
+    "qty": 1
+   }
+  ],
+  "total": 7.4,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-021",
+  "user_id": "abu_sami",
+  "ts": "2026-08-17T17:30",
+  "items": [
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 0.6,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-022",
+  "user_id": "abu_sami",
+  "ts": "2026-08-18T17:17",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-023",
+  "user_id": "abu_sami",
+  "ts": "2026-08-20T17:32",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "laban",
+    "qty": 1
+   }
+  ],
+  "total": 1.4,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-024",
+  "user_id": "abu_sami",
+  "ts": "2026-08-22T17:41",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "hummus",
+    "qty": 2
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 2.8,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-025",
+  "user_id": "abu_sami",
+  "ts": "2026-08-24T17:12",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "chicken",
+    "qty": 1
+   }
+  ],
+  "total": 3.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-026",
+  "user_id": "abu_sami",
+  "ts": "2026-08-25T17:15",
+  "items": [
+   {
+    "item_id": "laban",
+    "qty": 1
+   }
+  ],
+  "total": 0.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-027",
+  "user_id": "abu_sami",
+  "ts": "2026-08-26T17:32",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-028",
+  "user_id": "abu_sami",
+  "ts": "2026-08-27T17:49",
+  "items": [
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 0.6,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-029",
+  "user_id": "abu_sami",
+  "ts": "2026-08-28T17:00",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-030",
+  "user_id": "abu_sami",
+  "ts": "2026-08-30T17:05",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-031",
+  "user_id": "abu_sami",
+  "ts": "2026-08-31T17:16",
+  "items": [
+   {
+    "item_id": "laban",
+    "qty": 1
+   },
+   {
+    "item_id": "sugar",
+    "qty": 1
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 2.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-032",
+  "user_id": "abu_sami",
+  "ts": "2026-09-01T17:52",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-033",
+  "user_id": "abu_sami",
+  "ts": "2026-09-02T17:05",
+  "items": [
+   {
+    "item_id": "chicken",
+    "qty": 1
+   },
+   {
+    "item_id": "tissues",
+    "qty": 1
+   }
+  ],
+  "total": 5.8,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-034",
+  "user_id": "abu_sami",
+  "ts": "2026-09-03T17:09",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "hummus",
+    "qty": 2
+   },
+   {
+    "item_id": "coffee",
+    "qty": 1
+   }
+  ],
+  "total": 5.7,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-035",
+  "user_id": "abu_sami",
+  "ts": "2026-09-04T17:25",
+  "items": [
+   {
+    "item_id": "laban",
+    "qty": 1
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 1.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-036",
+  "user_id": "abu_sami",
+  "ts": "2026-09-05T17:37",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-037",
+  "user_id": "abu_sami",
+  "ts": "2026-09-07T17:02",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-038",
+  "user_id": "abu_sami",
+  "ts": "2026-09-08T17:25",
+  "items": [
+   {
+    "item_id": "chicken",
+    "qty": 1
+   }
+  ],
+  "total": 3.4,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-039",
+  "user_id": "abu_sami",
+  "ts": "2026-09-09T17:01",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "laban",
+    "qty": 1
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 2.0,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-040",
+  "user_id": "abu_sami",
+  "ts": "2026-09-11T17:19",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-041",
+  "user_id": "abu_sami",
+  "ts": "2026-09-13T17:19",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "laban",
+    "qty": 1
+   }
+  ],
+  "total": 1.4,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-042",
+  "user_id": "abu_sami",
+  "ts": "2026-09-14T17:40",
+  "items": [
+   {
+    "item_id": "chicken",
+    "qty": 1
+   }
+  ],
+  "total": 3.4,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-043",
+  "user_id": "abu_sami",
+  "ts": "2026-09-15T17:14",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 1.1,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-044",
+  "user_id": "abu_sami",
+  "ts": "2026-09-16T17:05",
+  "items": [
+   {
+    "item_id": "hummus",
+    "qty": 2
+   }
+  ],
+  "total": 1.7,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-045",
+  "user_id": "abu_sami",
+  "ts": "2026-09-17T17:37",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-046",
+  "user_id": "abu_sami",
+  "ts": "2026-09-19T17:33",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "laban",
+    "qty": 1
+   }
+  ],
+  "total": 1.4,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-047",
+  "user_id": "abu_sami",
+  "ts": "2026-09-20T17:54",
+  "items": [
+   {
+    "item_id": "coffee",
+    "qty": 1
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 4.1,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-048",
+  "user_id": "abu_sami",
+  "ts": "2026-09-21T17:48",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "chicken",
+    "qty": 1
+   }
+  ],
+  "total": 3.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-049",
+  "user_id": "abu_sami",
+  "ts": "2026-09-23T17:09",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "laban",
+    "qty": 1
+   }
+  ],
+  "total": 1.4,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-050",
+  "user_id": "abu_sami",
+  "ts": "2026-09-24T17:42",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "hummus",
+    "qty": 2
+   },
+   {
+    "item_id": "sugar",
+    "qty": 1
+   }
+  ],
+  "total": 3.6,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-051",
+  "user_id": "abu_sami",
+  "ts": "2026-09-26T17:57",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 1.1,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-052",
+  "user_id": "abu_sami",
+  "ts": "2026-09-28T17:45",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-053",
+  "user_id": "abu_sami",
+  "ts": "2026-09-29T17:50",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "chicken",
+    "qty": 1
+   }
+  ],
+  "total": 3.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-054",
+  "user_id": "abu_sami",
+  "ts": "2026-09-30T17:56",
+  "items": [
+   {
+    "item_id": "laban",
+    "qty": 1
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 1.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-055",
+  "user_id": "abu_sami",
+  "ts": "2026-10-01T17:38",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-056",
+  "user_id": "abu_sami",
+  "ts": "2026-10-02T17:24",
+  "items": [
+   {
+    "item_id": "tissues",
+    "qty": 1
+   }
+  ],
+  "total": 2.4,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-057",
+  "user_id": "abu_sami",
+  "ts": "2026-10-03T17:48",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "hummus",
+    "qty": 2
+   }
+  ],
+  "total": 2.2,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-058",
+  "user_id": "abu_sami",
+  "ts": "2026-10-04T17:20",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 1.1,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-059",
+  "user_id": "abu_sami",
+  "ts": "2026-10-06T17:46",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "laban",
+    "qty": 1
+   },
+   {
+    "item_id": "chicken",
+    "qty": 1
+   }
+  ],
+  "total": 4.8,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-060",
+  "user_id": "abu_sami",
+  "ts": "2026-10-08T17:31",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 1.1,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-061",
+  "user_id": "abu_sami",
+  "ts": "2026-10-09T17:09",
+  "items": [
+   {
+    "item_id": "coffee",
+    "qty": 1
+   }
+  ],
+  "total": 3.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-062",
+  "user_id": "abu_sami",
+  "ts": "2026-10-10T17:18",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-063",
+  "user_id": "abu_sami",
+  "ts": "2026-10-12T17:46",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "laban",
+    "qty": 1
+   },
+   {
+    "item_id": "chicken",
+    "qty": 1
+   }
+  ],
+  "total": 4.8,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-064",
+  "user_id": "abu_sami",
+  "ts": "2026-10-13T17:39",
+  "items": [
+   {
+    "item_id": "hummus",
+    "qty": 2
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 2.3,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-065",
+  "user_id": "abu_sami",
+  "ts": "2026-10-14T17:41",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-066",
+  "user_id": "abu_sami",
+  "ts": "2026-10-16T17:09",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-067",
+  "user_id": "abu_sami",
+  "ts": "2026-10-17T17:02",
+  "items": [
+   {
+    "item_id": "laban",
+    "qty": 1
+   }
+  ],
+  "total": 0.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-068",
+  "user_id": "abu_sami",
+  "ts": "2026-10-18T17:52",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 1.1,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-069",
+  "user_id": "abu_sami",
+  "ts": "2026-10-20T17:53",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "chicken",
+    "qty": 1
+   }
+  ],
+  "total": 3.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-070",
+  "user_id": "abu_sami",
+  "ts": "2026-10-22T17:45",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "sugar",
+    "qty": 1
+   }
+  ],
+  "total": 1.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-071",
+  "user_id": "abu_sami",
+  "ts": "2026-10-23T17:57",
+  "items": [
+   {
+    "item_id": "hummus",
+    "qty": 2
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 2.3,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-072",
+  "user_id": "abu_sami",
+  "ts": "2026-10-24T17:32",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "laban",
+    "qty": 1
+   },
+   {
+    "item_id": "chicken",
+    "qty": 1
+   }
+  ],
+  "total": 4.8,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-073",
+  "user_id": "abu_sami",
+  "ts": "2026-10-25T17:40",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-074",
+  "user_id": "abu_sami",
+  "ts": "2026-10-26T17:27",
+  "items": [
+   {
+    "item_id": "coffee",
+    "qty": 1
+   },
+   {
+    "item_id": "tissues",
+    "qty": 1
+   }
+  ],
+  "total": 5.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-075",
+  "user_id": "abu_sami",
+  "ts": "2026-10-27T17:46",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-076",
+  "user_id": "abu_sami",
+  "ts": "2026-10-28T17:44",
+  "items": [
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 0.6,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-077",
+  "user_id": "abu_sami",
+  "ts": "2026-10-29T17:51",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-078",
+  "user_id": "abu_sami",
+  "ts": "2026-10-30T17:32",
+  "items": [
+   {
+    "item_id": "laban",
+    "qty": 1
+   }
+  ],
+  "total": 0.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-079",
+  "user_id": "abu_sami",
+  "ts": "2026-10-31T17:08",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "chicken",
+    "qty": 1
+   }
+  ],
+  "total": 3.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-080",
+  "user_id": "abu_sami",
+  "ts": "2026-11-01T17:58",
+  "items": [
+   {
+    "item_id": "hummus",
+    "qty": 2
+   }
+  ],
+  "total": 1.7,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-081",
+  "user_id": "abu_sami",
+  "ts": "2026-11-02T17:33",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 1.1,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-082",
+  "user_id": "abu_sami",
+  "ts": "2026-11-04T17:48",
+  "items": [
+   {
+    "item_id": "laban",
+    "qty": 1
+   }
+  ],
+  "total": 0.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-083",
+  "user_id": "abu_sami",
+  "ts": "2026-11-05T17:32",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-084",
+  "user_id": "abu_sami",
+  "ts": "2026-11-06T17:36",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 1.1,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-085",
+  "user_id": "abu_sami",
+  "ts": "2026-11-07T17:53",
+  "items": [
+   {
+    "item_id": "chicken",
+    "qty": 1
+   }
+  ],
+  "total": 3.4,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-086",
+  "user_id": "abu_sami",
+  "ts": "2026-11-08T17:52",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-087",
+  "user_id": "abu_sami",
+  "ts": "2026-11-09T17:51",
+  "items": [
+   {
+    "item_id": "laban",
+    "qty": 1
+   }
+  ],
+  "total": 0.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-088",
+  "user_id": "abu_sami",
+  "ts": "2026-11-10T17:01",
+  "items": [
+   {
+    "item_id": "hummus",
+    "qty": 2
+   }
+  ],
+  "total": 1.7,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-089",
+  "user_id": "abu_sami",
+  "ts": "2026-11-11T17:52",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "chicken",
+    "qty": 1
+   },
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 4.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-090",
+  "user_id": "abu_sami",
+  "ts": "2026-11-12T17:43",
+  "items": [
+   {
+    "item_id": "sugar",
+    "qty": 1
+   }
+  ],
+  "total": 1.4,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-091",
+  "user_id": "abu_sami",
+  "ts": "2026-11-13T17:37",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   }
+  ],
+  "total": 0.5,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-092",
+  "user_id": "abu_sami",
+  "ts": "2026-11-14T17:51",
+  "items": [
+   {
+    "item_id": "laban",
+    "qty": 1
+   }
+  ],
+  "total": 0.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-093",
+  "user_id": "abu_sami",
+  "ts": "2026-11-15T17:57",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "coffee",
+    "qty": 1
+   }
+  ],
+  "total": 4.0,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-094",
+  "user_id": "abu_sami",
+  "ts": "2026-11-16T17:45",
+  "items": [
+   {
+    "item_id": "cucumbers",
+    "qty": 1
+   }
+  ],
+  "total": 0.6,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-095",
+  "user_id": "abu_sami",
+  "ts": "2026-11-18T17:43",
+  "items": [
+   {
+    "item_id": "bread_big",
+    "qty": 1
+   },
+   {
+    "item_id": "chicken",
+    "qty": 1
+   }
+  ],
+  "total": 3.9,
+  "confirmed_by": "Rana"
+ },
+ {
+  "order_id": "abu_sami-096",
+  "user_id": "abu_sami",
+  "ts": "2026-11-19T17:44",
+  "items": [
+   {
+    "item_id": "laban",
+    "qty": 1
+   }
+  ],
+  "total": 0.9,
+  "confirmed_by": "Rana"
+ }
+]

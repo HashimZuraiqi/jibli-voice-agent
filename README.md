@@ -50,6 +50,7 @@ Playbook rules: always pass lat/lng (`user_info` for saved addresses), confirm b
 | `backend/` | API, confirm gate, family approval flow | Faris |
 | `web/` | Record-button page (the guaranteed demo) and approval page | Anas / Faris |
 | `whatsapp/` | Stretch: Twilio sandbox or Meta test number. No Telegram (blocked in Jordan). | Faris |
+| `ai-core/` | AI core: LLM brain + personalization layer (memory, repurchase prediction, bandit reminders, uplift offers, guardrails), runnable demo on mocked Careem data. See [ai-core/README.md](ai-core/README.md) | Anas |
 | `.kiro/` | Kiro specs (requirements, design, tasks) and steering | Hashim |
 | `docs/` | Brief and notes | All |
 
