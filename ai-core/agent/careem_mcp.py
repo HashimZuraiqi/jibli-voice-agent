@@ -33,6 +33,8 @@ DEFAULT_ALLOWED = ("user_info,get_activities,track_activity,is_grocery_area_serv
                    "create_grocery_cart_with_quantities,cart_get_quik_basket,cart_get_basket_price,cart_get_checkout_promos")
 # checkout argument -> keys from earlier answers that hold its value (normalized: lowercase, no _ or -)
 ALIASES = {"totalprice": ("totalprice", "total", "baskettotal", "grandtotal")}
+# the spend cap is in JOD; the sandbox prices in AED (fake Dubai data), production in the user's currency
+TO_JOD = {"JOD": 1.0, "JD": 1.0, "AED": 0.193, "SAR": 0.189, "USD": 0.709}
 
 
 class MCPConnector:
@@ -189,6 +191,13 @@ class CareemMCPTools:
                     pass
         return None
 
+    @staticmethod
+    def currency(basket):
+        for k, v in flatten(basket).items():
+            if norm_key(k) in ("currency", "currencycode") and isinstance(v, str):
+                return v.upper()
+        return "JOD"
+
     def request_confirmation(self, ctx, by):
         uid = ctx["user_id"]
         basket = self.st(uid)["basket"]
@@ -214,9 +223,9 @@ class CareemMCPTools:
             return False, f"confirmation was requested from {pending['by']}, not {by}"
         if not st["basket"] or self.fingerprint(st["basket"]) != pending["basket"]:
             return False, "the cart changed after confirmation was requested; ask again"
-        total = self.total(st["basket"])
-        if total is not None and total > g.SPEND_CAP_JOD:
-            return False, f"total {total} JOD is over the {g.SPEND_CAP_JOD} JOD cap"
+        total, cur = self.total(st["basket"]), self.currency(st["basket"])
+        if total is not None and total * TO_JOD.get(cur, 1.0) > g.SPEND_CAP_JOD:
+            return False, f"total {total} {cur} is over the {g.SPEND_CAP_JOD} JOD cap"
         if by == self.store.users[uid]["name"]:
             if turn is not None and pending.get("turn") == turn:
                 return False, "the user must say yes in their next message"

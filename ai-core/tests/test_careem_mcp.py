@@ -9,8 +9,8 @@ NOW = dt.datetime(2026, 11, 22, 12, 0)
 
 
 class FakeCareem:
-    def __init__(self, total=4.25):
-        self.calls, self.total = [], total
+    def __init__(self, total=4.25, currency="JOD"):
+        self.calls, self.total, self.currency = [], total, currency
         self.fail_checkout = False
 
     def list_tools(self):
@@ -34,7 +34,7 @@ class FakeCareem:
         if name == "create_grocery_cart_with_quantities":
             return {"cart": {"cart_id": "C42"}}
         if name == "cart_get_basket_price":
-            return {"cart_id": "C42", "total": self.total, "currency": "JOD"}
+            return {"cart_id": "C42", "total": self.total, "currency": self.currency}
         if name == CHECKOUT:
             if self.fail_checkout:
                 raise TimeoutError("network")
@@ -47,8 +47,8 @@ class NoMemory:
         return []
 
 
-def setup(tmp_path, total=4.25):
-    store, fake = Store(tmp_path), FakeCareem(total)
+def setup(tmp_path, total=4.25, currency="JOD"):
+    store, fake = Store(tmp_path), FakeCareem(total, currency)
     tools = CareemMCPTools(store, NoMemory(), Tools(store, NoMemory()), connector=fake)
     return store, fake, tools
 
@@ -135,3 +135,14 @@ def test_failed_checkout_is_not_retried(tmp_path):
     fake.fail_checkout = False
     assert "already failed" in tools.family_checkout("um_khaled", "Khaled", NOW)["error"]  # second tap
     assert len(checkouts(fake)) == 1
+
+
+def test_spend_cap_converts_sandbox_aed(tmp_path):
+    store, fake, tools = setup(tmp_path, total=60.0, currency="AED")  # about 11.6 JOD: under the 30 JOD cap
+    build_cart(tools)
+    tools.run("request_confirmation", {"by": "Khaled"}, ctx(1))
+    assert tools.family_checkout("um_khaled", "Khaled", NOW)["status"] == "ordered"
+    store, fake, tools = setup(tmp_path / "b", total=200.0, currency="AED")  # about 38.6 JOD: over
+    build_cart(tools)
+    tools.run("request_confirmation", {"by": "Khaled"}, ctx(1))
+    assert "cap" in tools.family_checkout("um_khaled", "Khaled", NOW)["reason"]
