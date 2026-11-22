@@ -13,7 +13,15 @@ def load(monkeypatch):
     return amman
 
 
-BASE = lambda n, a, s=None: {"user_info": {"zoneinfo": "Asia/Dubai", "currency": "AED"}, "saved_bookmarks": []}
+import server  # noqa: E402  (careem-mcp-sandbox/server.py)
+
+FILES = server.load_all()
+
+
+def BASE(tool, args, scenario=None):
+    """Careem's own answer for the tool (what the server passes to amman.handle as the shape to fill)."""
+    f = server.parse_file(FILES[tool]["path"])
+    return server.render(server.select(f, args, scenario)[0]["template"], args)
 HERE = {"latitude": 31.95, "longitude": 35.91}
 
 
@@ -53,4 +61,42 @@ def test_checkout_once_with_the_right_price(monkeypatch):
 def test_unknown_item_is_reported(monkeypatch):
     amman = load(monkeypatch)
     s = amman.handle("search_groceries_items", {"search_terms": ["unicorn"], **HERE}, BASE)
-    assert s["not_found"] == ["unicorn"] and s["groups"][0]["items"] == []
+    assert s["groups"][0]["name"] == "unicorn" and s["groups"][0]["items"] == []
+
+
+def test_every_amman_answer_matches_careems_output_schema(monkeypatch):
+    """Live run: the app's MCP client validates answers against each tool's outputSchema; Amman answers with extra or
+    missing fields (not_found, eta_minutes, upc, careem_user_id, ...) failed there and the agent said "the system is down"."""
+    from jsonschema import Draft202012Validator
+    amman = load(monkeypatch)
+    monkeypatch.setattr(server, "amman", amman)
+
+    def call(name, args):
+        value, is_error, _ = server.call(FILES, name, args)
+        assert not is_error, name
+        errors = [f"{'/'.join(map(str, e.absolute_path))}: {e.message[:120]}"
+                  for e in Draft202012Validator(FILES[name]["definition"]["outputSchema"]).iter_errors(value)]
+        assert errors == [], f"{name}: {errors[:3]}"
+        return value
+
+    call("user_info", HERE)
+    call("is_grocery_area_serviceable", HERE)
+    s = call("search_groceries_items", {"search_terms": ["خبز", "unicorn"], **HERE})
+    call("search_groceries_get_top_user_items", HERE)
+    bread = s["groups"][0]["items"][0]
+    call("create_grocery_cart_with_quantities", {"items": [{"keyword": "خبز", "catalog_item_id": str(bread["id"]),
+                                                            "quantity": 2}], "merchant_id": s["merchant_id"], **HERE})
+    call("search_groceries_get_top_user_items", HERE)  # now with a current basket
+    call("cart_get_quik_basket", HERE)
+    p = call("cart_get_basket_price", {"merchant_id": s["merchant_id"], **HERE})
+    done = call("cart_grocery_checkout", {"basket_id": p["basket"]["id"], "total_price": p["price"]["price"]["total"], **HERE})
+    assert done["currency"] == "JOD" and done["invoice_id"].startswith("INV-")
+    call("cart_grocery_checkout", {"basket_id": p["basket"]["id"], "total_price": p["price"]["price"]["total"], **HERE})
+
+
+def test_alive_check_does_not_kill_the_process():
+    """On Windows os.kill(pid, 0) terminates the process; careem_mcp.py used it as a liveness check."""
+    import os
+    import careem_mcp
+    assert careem_mcp.alive(os.getpid())  # still here afterwards, so the check didn't kill us
+    assert not careem_mcp.alive(2 ** 22 + 7)
