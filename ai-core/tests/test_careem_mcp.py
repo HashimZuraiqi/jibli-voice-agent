@@ -242,3 +242,18 @@ def test_asked_of_khaled_only_khaled(tmp_path):
     assert "BLOCKED" in tools.run("place_order", {"confirmed_by": "user"}, ctx(2, "اه"))["error"]
     assert tools.family_checkout("um_khaled", "Abu Khaled", NOW)["status"] == "blocked"  # not allowed to confirm
     assert tools.family_checkout("um_khaled", "Khaled", NOW)["status"] == "ordered"
+
+
+def test_orders_text_handles_mcp_baskets_and_orders(tmp_path):
+    """Live run: a pending MCP basket has no total_jod, so every chat turn while waiting crashed (HTTP 500),
+    and orders placed through MCP never reached the prompt, so after Khaled approved the agent asked her again."""
+    from types import SimpleNamespace
+    from agent.brain import Brain
+    store, fake, tools = setup(tmp_path, total=45.5, currency="AED")
+    build_cart(tools)
+    tools.run("request_confirmation", {"by": "Khaled"}, ctx(1))
+    me = SimpleNamespace(store=store)
+    assert "waiting for Khaled to approve: Quik groceries basket (45.5 AED)" in Brain.orders_text(me, "um_khaled")
+    assert tools.family_checkout("um_khaled", "Khaled", NOW)["status"] == "ordered"
+    text = Brain.orders_text(me, "um_khaled")
+    assert "waiting" not in text and "groceries placed 2026-11-22 12:00, approved by Khaled: Quik basket (45.5" in text

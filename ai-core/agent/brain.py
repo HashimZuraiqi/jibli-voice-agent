@@ -92,8 +92,17 @@ class Brain:
         pending = self.store.state["pending"].get(user_id)
         if pending and pending.get("tool"):
             lines.append(f"- waiting for {pending['by']} to approve: {pending['summary']} ({pending['total']} {pending['currency']})")
-        elif pending:
+        elif pending and "total_jod" in (pending.get("cart") or {}):  # mock cart
             lines.append(f"- waiting for {pending['by']} to approve: {pending['cart']['total_jod']} JOD")
+        elif pending:  # Careem MCP grocery basket (CAREEM_PROVIDER=mcp): Careem's own total and currency
+            from .careem_mcp import CareemMCPTools as M
+            cart = pending.get("cart") or {}
+            lines.append(f"- waiting for {pending['by']} to approve: Quik groceries basket ({M.total(cart)} {M.currency(cart)})")
+        # Careem MCP grocery orders (else the agent never hears that the family already approved and asks again)
+        for o in list((self.store.state.get("mcp", {}).get(user_id) or {}).get("done", {}).values())[-3:][::-1]:
+            cur = (o.get("careem") or {}).get("currency")
+            lines.append(f"- groceries placed {o['ts'].replace('T', ' ')}, approved by {o['confirmed_by']}: "
+                         f"Quik basket ({o.get('total')}{' ' + cur if cur else ''})")
         for o in [o for o in self.store.state.get("service_orders", []) if o["user_id"] == user_id][-3:][::-1]:
             lines.append(f"- {o['service']} {'placed' if o['ok'] else 'FAILED'} {o['ts'].replace('T', ' ')}, approved by "
                          f"{o['confirmed_by']}: {o['summary']} ({o['total']} {o['currency']})")
