@@ -40,7 +40,9 @@ Memory runs on Amazon Bedrock AgentCore Memory. Backup: `MEMORY_PROVIDER=mem0` i
 - Speech: `STT_PROVIDER` / `TTS_PROVIDER` in `.env` (see `.env.example`). Anas's functions plug in without code changes:
   `STT_PROVIDER=func`, `STT_FUNC=stt.anas:stt` (`stt(audio_bytes) -> text`), `TTS_PROVIDER=func`,
   `TTS_FUNC=stt.anas:tts` (`tts(text) -> audio_bytes`). Without them: local Whisper (`pip install openai-whisper`
-  + ffmpeg) and the browser's own Arabic voice. The recording is never stored.
+  + ffmpeg) and the browser's own Arabic voice. **Open the voice page in Microsoft Edge**: it has online natural
+  Jordanian voices (ar-JO), which the page prefers; `?voice=Taim` picks one by name. Amazon Polly is blocked for the
+  event's AWS role (AccessDenied), so don't use `TTS_PROVIDER=polly` there. The recording is never stored.
 - The phone must reach the laptop: use the laptop's LAN IP (`--host 0.0.0.0`). Browsers only allow the mic on
   http://localhost or https, so run the elder page on the laptop itself.
 
