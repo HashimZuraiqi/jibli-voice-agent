@@ -624,11 +624,18 @@ function renderBasket() {
                 || (v.summary ? `<div class="row">${esc(v.summary)}</div>` : "");
   const addr = v.address || (v.summary && /عنوان|البيت|address|Home/i.test(v.summary) ? v.summary : "عنوانك المحفوظ · البيت");
   const mine = v.asked_user && (!SETTINGS || SETTINGS.confirm_mode !== "family");
-  box.innerHTML = `<div class="card basket" id="basket-card"><h3><span>🛒 طلبك من كويك</span><button class="link" style="font-size:15px" data-go="why">ليش؟ · Why?</button></h3>${items}
-    <div class="total"><span>المجموع مع التوصيل</span><span>${esc(money(v.total, v.currency))}</span></div>
-    <div class="addr">📍 ${esc(addr)}</div>
-    ${mine ? `<div class="yn"><button class="btn primary" id="yes">نعم<small>اطلب هلق · Yes</small></button><button class="btn ghost" id="no">لا<small>بدي أغيّر · No</small></button></div>
-      ${v.confirmer && (!SETTINGS || SETTINGS.confirm_mode === "either") ? `<div class="en-sub" style="text-align:center;margin-top:8px">أو ${esc(nm(v.confirmer))} بيقدر يوافق من تلفونه، مين ما سبق</div>` : ""}`
+  // a Careem ride (Faris): no basket, no delivery address, no "Why?" link, no "or <confirmer>" line when he confirms himself
+  const ride = v.tool === "rides_request", leg = ride && /(\w+)\s*->\s*(\w+)/.exec(v.summary || "");
+  const place = x => ({Work: "الشغل", Gym: "الجيم", Home: "البيت"})[x] || x;
+  const head = ride ? `<h3><span>🚗 مشوار كريم</span></h3>${leg ? `<div class="row"><span>${esc(place(leg[1]))} ← ${esc(place(leg[2]))}</span><span>كابتن قريب منك</span></div>` : ""}`
+    : `<h3><span>🛒 طلبك من كويك</span><button class="link" style="font-size:15px" data-go="why">ليش؟ · Why?</button></h3>${items}`;
+  LAST_RIDE = ride ? (leg ? [place(leg[1]), place(leg[2])] : ["", ""]) : null;
+  const other = v.confirmer && v.confirmer !== (v.user && v.user.name) && (!SETTINGS || SETTINGS.confirm_mode === "either");
+  box.innerHTML = `<div class="card basket" id="basket-card">${head}
+    <div class="total"><span>${ride ? "سعر المشوار" : "المجموع مع التوصيل"}</span><span>${esc(money(v.total, v.currency))}</span></div>
+    ${ride ? "" : `<div class="addr">📍 ${esc(addr)}</div>`}
+    ${mine ? `<div class="yn"><button class="btn primary" id="yes">نعم<small>${ride ? "اطلب المشوار · Yes" : "اطلب هلق · Yes"}</small></button><button class="btn ghost" id="no">لا<small>بدي أغيّر · No</small></button></div>
+      ${other ? `<div class="en-sub" style="text-align:center;margin-top:8px">أو ${esc(nm(v.confirmer))} بيقدر يوافق من تلفونه، مين ما سبق</div>` : ""}`
            : `<div class="row" style="justify-content:center">⏳ بنستنى ${esc(nm(v.asked))} يوافق</div><button class="btn soft" style="width:100%" data-go="family">📱 شوف تلفون ${esc(nm(v.asked))}</button>`}</div>`;
   if ($("yes")) { $("yes").onclick = () => !busy && say("اه"); $("no").onclick = () => !busy && say("لا"); }
 }
@@ -674,7 +681,7 @@ async function enterHome() {
 $("home-mic").onclick = () => go("voice"); $("tile-quik").onclick = () => go("voice"); $("home-why").onclick = () => openWhy();
 
 // ---------------- 1. lock screen: the real reminder (POST /api/reminder), banner expands into Jibli
-let reminderText = null, reminderLoading = false, reminderAudio = null;
+let reminderText = null, reminderLoading = false, reminderAudio = null, reminderRide = null;
 // Leva needs a few seconds per sentence: make the reminder's audio while the banner is on screen, so the tap plays
 // it at once and inside the tap (a sound started seconds after a tap can be blocked, which fell back to the browser voice)
 function prefetchReminderAudio() {
@@ -689,6 +696,7 @@ async function enterLock() {
   if (reminderLoading) return; reminderLoading = true;
   try {
     const r = await (await post("/api/reminder", {user_id:USER})).json();
+    reminderRide = r.ride || null;
     if (r.reply) reminderText = r.reply;
     else {  // blocked (already reminded today / quiet hours): show the last sentence Jibli said, or the live due items
       const w = await loadWhy().catch(() => null);
@@ -699,10 +707,13 @@ async function enterLock() {
   } catch (e) { reminderText = "شو بدك نجيبلك اليوم؟"; }
   reminderLoading = false; showBanner();
 }
+
+const PLACE_AR = {Work: "الشغل", Gym: "الجيم", Home: "البيت"};
 function showBanner() {
   $("lock-wait").style.display = "none";
   const items = ((S && S.advice.running_out) || []).map(shortName);
-  $("banner-title").textContent = items.length ? `${items[0]} قرّب يخلص` : "جيبلي";
+  $("banner-title").textContent = reminderRide ? `مشوارك ع${PLACE_AR[reminderRide.to] || reminderRide.to} 🚗`
+    : items.length ? `${items[0]} قرّب يخلص` : "جيبلي";
   $("banner-text").textContent = reminderText; $("banner").classList.add("show");
   if (!reminderAudio) prefetchReminderAudio();
 }
@@ -827,7 +838,7 @@ async function decide(approve) {
 }
 
 // ---------------- 8. confirmed -> tracking (simulated timer, labelled as demo)
-let trackTimer = null, ORDER_BY = "";
+let trackTimer = null, ORDER_BY = "", LAST_RIDE = null, TRACK_HTML = null;
 async function ordered(by) {
   ORDER_BY = by ? nm(by) || by : "";
   const bc = $("basket-card");
@@ -835,9 +846,20 @@ async function ordered(by) {
   go("track", {instant: !!bc});
 }
 function enterTrack() {
+  // a ride (Faris) tracks the captain coming to him, not a Quik delivery
+  const track = $("track"); TRACK_HTML = TRACK_HTML || track.innerHTML;
+  if (track.innerHTML !== TRACK_HTML) track.innerHTML = TRACK_HTML;
+  if (LAST_RIDE) {
+    const [a, b] = LAST_RIDE, t = track.querySelectorAll("#map text");
+    t[0].textContent = "🚗 الكابتن"; t[1].textContent = `📍 ${a}`; $("cap").textContent = "🚗";
+    track.querySelector(".eta > span").innerHTML = 'الكابتن بيوصلك خلال<span class="en-sub">Captain arriving in</span>';
+    const labels = [["الكابتن وافق عالمشوار", "Captain accepted"], ["الكابتن بالطريق لعندك", "On the way to you"],
+                    ["قرّب يوصل", "Almost there"], ["وصل الكابتن! يلا عالمشوار", "Arrived"]];
+    track.querySelectorAll("#steps li").forEach((li, i) => li.innerHTML = `<span class="b">${ar(i + 1)}</span>${labels[i][0]}<span class="en-sub">${labels[i][1]}</span>`);
+  }
   $("track-by").textContent = ORDER_BY ? `وافق ${ORDER_BY} · approved by ${ORDER_BY}` : "";
   const dc = $("done-check"); dc.innerHTML = dc.innerHTML;  // replay the check animation
-  const steps = [...document.querySelectorAll("#steps li")], total = 20, t0 = Date.now(), etaMin = 20;
+  const steps = [...document.querySelectorAll("#steps li")], total = 20, t0 = Date.now(), etaMin = LAST_RIDE ? 4 : 20;
   const pts = [[300, 40], [250, 66], [240, 124], [120, 136], [70, 150]], cap = $("cap"), map = $("map");
   const place = k => { const [x, y] = pts[Math.min(pts.length - 1, k)], w = map.clientWidth / 358, h = map.clientHeight / 180;
                        cap.style.left = `${x * w - 17}px`; cap.style.top = `${y * h - 17}px`; };
@@ -885,7 +907,7 @@ document.addEventListener("keydown", e => { if (e.target.tagName === "INPUT") re
 let taps = 0; $("sb").addEventListener("click", () => { taps++; clearTimeout($("sb").t); $("sb").t = setTimeout(() => taps = 0, 600); if (taps >= 3) { taps = 0; toggleDemo(); } });
 $("demo").addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) { e.stopPropagation(); go(b.dataset.go); } });
 $("d-close").onclick = () => toggleDemo(false);
-$("d-remind").onclick = () => { reminderText = null; reminderAudio = null; go("lock"); enterLock(); };
+$("d-remind").onclick = () => { reminderText = null; reminderAudio = null; reminderRide = null; go("lock"); enterLock(); };
 if (new URLSearchParams(location.search).has("demo")) toggleDemo(true);
 
 setInterval(() => ["voice", "family"].includes(current) && pollView(), 2500);

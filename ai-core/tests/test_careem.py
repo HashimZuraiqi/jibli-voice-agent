@@ -372,3 +372,16 @@ def test_ride_booking_reports_the_confirmed_price_and_currency(tools, monkeypatc
               ctx(1))
     ride = tools._ride(tools.store.state["pending"][ctx(1)["user_id"]])
     assert (ride["price"], ride["currency"]) == (go["price"], "JOD") and "price_aed" not in ride
+
+
+def test_amman_ride_is_priced_like_amman_and_booking_keeps_the_quoted_eta(tools, monkeypatch):
+    """Faris: Work -> Gym in the Amman world is about 5 JOD (not a converted Dubai fare), and the captain eta stays as quoted."""
+    monkeypatch.setenv("SANDBOX_WORLD", "amman")
+    q = tools.run("rides_get_quote", {"pickup": "Work", "dropoff": "Gym", "product": "Go"}, ctx(1))
+    go = q["quotes"][0]
+    assert 4 <= go["price"] <= 6 and round(go["price"] * 20) == go["price"] * 20  # 0.05 JOD steps
+    tools.run("request_confirmation", {"by": "user", "checkout_tool": "rides_request", "total": go["price"], "currency": "JOD",
+                                       "summary": "Careem ride Work -> Gym", "checkout_args": {"quote_id": q["quote_id"], "product": "Go"}},
+              ctx(1))
+    ride = tools._ride(tools.store.state["pending"][ctx(1)["user_id"]])
+    assert ride["eta_min"] == go["eta_min"]

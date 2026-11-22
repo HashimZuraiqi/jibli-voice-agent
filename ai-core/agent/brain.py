@@ -302,7 +302,9 @@ class Brain:
         reply = (msg.content or "").strip()
         self.layer.record_reminder(user_id, now, advice)
         self.history.setdefault(user_id, []).append({"role": "assistant", "content": reply})
-        return {"reply": reply, "advice": advice, "model": meta["model"]}
+        r = shown.get("usual_ride") if ride else None  # the demo app titles the lock-screen banner after the ride, not groceries
+        return {"reply": reply, "advice": advice, "model": meta["model"],
+                "ride": {"from": r["from"], "to": r["to"]} if r else None}
 
     def prepare_usual_ride(self, user_id, now, advice):
         """mcp-all with rides: quote the user's usual ride now and ask for the yes in the reminder itself, so a single
@@ -319,15 +321,15 @@ class Brain:
         price, currency = quote.get("price", quote.get("price_aed")), quote.get("currency", "AED")
         ok = self.tools.run("request_confirmation", {
             "by": "user", "checkout_tool": "rides_request", "checkout_args": {"quote_id": q["quote_id"], "product": r["product"]},
-            "total": price, "currency": currency, "summary": f"{r['product']} ride {r['from']} -> {r['to']}"}, ctx)
+            "total": price, "currency": currency, "summary": f"Careem ride {r['from']} -> {r['to']}"}, ctx)
         if not isinstance(ok, dict) or ok.get("status") != "waiting":
             return None
         day = now.strftime("%A")
-        return (f"their usual ride: a Careem {r['product']} from {r['from']} to {r['to']}, which they take every {day} around "
+        return (f"their usual ride: a Careem ride (say «مشوار كريم», never the product name {r['product']} or «كريم جو») from {r['from']} to {r['to']}, which they take every {day} around "
                 f"this time ({r['times']} times). It is already priced ({price} {currency}, captain {quote.get('eta_min', 4)} "
                 f"minutes away) and waiting only for their yes. Greet them for the time of day, ask if they finished work, "
                 f"and offer to order it, e.g. «مسا الخير {self.store.users[user_id]['name_ar']}، خلصت شغلك؟ بدك أطلبلك من "
-                f"الشغل للجيم، زي كل {ARABIC_DAYS[now.weekday()]}؟». Do not mention groceries")
+                f"الشغل للجيم، زي كل {ARABIC_DAYS[now.weekday()]}؟». Do not mention groceries. When you book it, call it «مشوار كريم»")
 
     def reminder_items(self, advice):
         parts = []

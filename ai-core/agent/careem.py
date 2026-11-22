@@ -206,7 +206,8 @@ class CareemTools:
                   for i, (p, (base, per_km)) in enumerate(RIDE_PRODUCTS.items()) if not product or p == product]
         amman = os.getenv("SANDBOX_WORLD", "dubai").lower() == "amman"  # the demo world is Amman: price rides in JOD
         for x in quotes:
-            x["price"], x["currency"] = (round(x["price_aed"] * 0.193, 2), "JOD") if amman else (x["price_aed"], "AED")
+            # Amman fares, not Dubai fares converted: a ~10 km Go across Amman is about 5 JOD, rounded to 0.05 like the app shows
+            x["price"], x["currency"] = (round(x["price_aed"] * 0.102 * 20) / 20, "JOD") if amman else (x["price_aed"], "AED")
         quote_id = "rq_" + uuid.uuid4().hex[:8]
         self.store.state.setdefault("ride_quotes", {})[quote_id] = {"pickup": pickup, "dropoff": dropoff, "km": round(km, 1),
                                                                      "quotes": quotes}
@@ -327,7 +328,7 @@ class CareemTools:
         # the price and currency that were quoted and confirmed (JOD in the Amman world); reporting price_aed here made
         # the agent warn Faris that the price "changed" to ~49 dirhams after he agreed to 9.45 JOD
         return {"ride_id": "ride_" + uuid.uuid4().hex[:6], "status": "captain_assigned", "captain": "Ahmed K.",
-                "eta_min": 5, "product": p["args"]["product"], "from": q["pickup"], "to": q["dropoff"],
+                "eta_min": x.get("eta_min", 4), "product": p["args"]["product"], "from": q["pickup"], "to": q["dropoff"],
                 "price": x.get("price", x["price_aed"]), "currency": x.get("currency", "AED")}
 
     def t_memory_list(self, ctx):
