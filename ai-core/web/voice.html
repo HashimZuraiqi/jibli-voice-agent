@@ -204,6 +204,7 @@ function render(v) {
 }
 
 // the family can approve from their phone at any moment: keep the card fresh
+let offline = false;
 async function poll() {
   if (busy) return;  // a reply is on its way; it updates the card itself
   try {
@@ -218,7 +219,11 @@ async function poll() {
       $("cards").innerHTML = declined ? `<div class="card declined">❌ ما انطلب شي</div>` : DONE;
     } else render(v);
     wasWaiting = v.waiting;
-  } catch (e) {}
+  } catch (e) {  // the app is down or restarting: tell her once, keep retrying
+    if (!offline) { offline = true; $("status").textContent = "⚠️ مش قادر أوصل للتطبيق… عم بحاول"; }
+    return;
+  }
+  if (offline) { offline = false; setBusy(false); }
 }
 poll(); setInterval(poll, 3000);
 speechSynthesis && speechSynthesis.getVoices();

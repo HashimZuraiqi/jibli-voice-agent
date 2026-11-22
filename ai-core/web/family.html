@@ -91,8 +91,17 @@ async function decide(approve) {
   acting = false; poll();
 }
 
+let misses = 0;
 async function poll() {
-  try { render(await (await fetch(`/api/family-view/${encodeURIComponent(USER)}`)).json()); } catch (e) {}
+  try {
+    const res = await fetch(`/api/family-view/${encodeURIComponent(USER)}`);
+    const v = await res.json();
+    if (!res.ok) throw new Error(v.detail || v.error || res.statusText);
+    misses = 0; render(v);
+  } catch (e) {  // the app is down or restarting: say so instead of a silent "…", and keep retrying
+    if (++misses >= 2 && !acting)
+      $("card").innerHTML = `<div class="idle">⚠️ مش قادر أوصل للتطبيق هلق… عم بحاول كمان مرة<br><small>${esc(e.message)}</small></div>`;
+  }
 }
 tick(); setInterval(tick, 10000); poll(); setInterval(poll, 2000);
 </script>
