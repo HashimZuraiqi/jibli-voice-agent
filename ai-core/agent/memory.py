@@ -24,8 +24,10 @@ SEED_FACTS = {
 class UserMemory:
     def __init__(self, state_dir, models):
         self.infer = os.getenv("MEM0_INFER", "true").lower() == "true"
+        self.models = models  # the LLM client's list, reordered in place so the working model is first
         self.mem = Memory.from_config({
-            "llm": {"provider": "openai", "config": {"model": models[0], "models": models, "temperature": 0}},
+            # one model only: with a "models" list Mem0 drops "model" and the OpenAI SDK rejects the request
+            "llm": {"provider": "openai", "config": {"model": models[0], "temperature": 0}},
             "embedder": {"provider": "fastembed",
                          "config": {"model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"}},
             "vector_store": {"provider": "qdrant", "config": {"path": str(state_dir / "qdrant"), "collection_name": "users",
@@ -44,6 +46,7 @@ class UserMemory:
         if not ok:
             return False, reason
         try:
+            self.mem.llm.config.model = self.models[0]
             self.mem.add([{"role": "user", "content": text}], user_id=user_id, infer=self.infer)
             return True, "ok"
         except Exception as e:  # a failed memory write must not break the conversation
