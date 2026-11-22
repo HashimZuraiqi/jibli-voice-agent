@@ -13,14 +13,21 @@ YES_WORDS = {"yes", "yeah", "yep", "yup", "ok", "okay", "okey", "sure", "confirm
              "absolutely", "definitely", "ofc", "yalla",
              "نعم", "اه", "ايوا", "ايوه", "ايه", "يس", "تمام", "ماشي", "يلا", "موافق", "موافقه", "اكيد", "طبعا", "حاضر",
              "اوكي", "اوك", "خلص", "زبط", "مزبوط", "اطلب", "اطلبه", "اطلبها", "اطلبلي", "اطلبيه",
-             "اطلبوا", "ابعت", "ابعته", "ابعتها", "ابعتلي", "بعته", "بعتها", "اكد", "اكده", "اكدها"}
+             "اطلبوا", "ابعت", "ابعته", "ابعتها", "ابعتلي", "بعته", "بعتها", "اكد", "اكده", "اكدها", "كمل", "كمله",
+             "كملي", "كملها", "اعتمد", "توكل",
+             # Arabizi (Arabic in Latin letters)
+             "aywa", "aiwa", "aywah", "akeed", "akid", "tamam", "mashi", "5alas", "khalas", "na3am", "kammel", "kamel"}
 YES_PHRASES = (("order", "it"), ("go", "ahead"), ("do", "it"), ("of", "course"), ("sounds", "good"), ("please", "do"),
                ("send", "it"), ("why", "not"))
 # "no problem" style phrases say yes even though they hold a negation word
-NO_PROBLEM = (("ما", "في", "مشكله"), ("مافي", "مشكله"), ("مش", "مشكله"), ("ولا", "يهمك"), ("no", "problem"),
+# "why not" style replies mean yes only when they are the whole reply
+WHOLE_REPLY_YES = (["ليش", "لا"], ["ليش", "لاء"], ["why", "not"])
+NO_PROBLEM = (("ما", "في", "مشكله"), ("مافي", "مشكله"), ("مش", "مشكله"), ("ولا", "يهمك"), ("ما", "عندي", "مانع"),
+              ("no", "problem"),
               ("not", "a", "problem"))
 NO_WORDS = {"no", "not", "nope", "nah", "never", "dont", "don't", "cancel", "later", "stop", "wait", "hold",
-            "لا", "لاء", "مش", "مو", "ما", "بلاش", "بعدين", "الغي", "الغاء", "وقف", "استنى", "مابدي"}
+            "لا", "لاء", "مش", "مو", "ما", "بلاش", "بعدين", "الغي", "الغاء", "وقف", "استنى", "مابدي",
+            "la", "la2", "laa", "mish", "msh", "ba3den", "ba3dain", "mabdi"}
 # a question is never consent ("صح؟", "ok?", "how much?")
 QUESTION_WORDS = {"what", "why", "how", "where", "when", "which", "who", "really", "شو", "ليش", "كيف", "وين", "كم",
                   "قديش", "ايش", "هل", "متى", "امتى", "مين"}
@@ -32,7 +39,7 @@ def tokens(text):
     """One normalization for both checks: no diacritics, one alef/hamza form, punctuation (incl. ، ؛ ؟) dropped."""
     t = re.sub(r"[\u064B-\u0652\u0640]", "", (text or "").lower())
     t = re.sub(r"[أإآ]", "ا", t).replace("ى", "ي").replace("ة", "ه").replace("لأ", "لا")
-    return re.findall(r"[a-z']+|[\u0621-\u064A]+|\d+", t)
+    return re.findall(r"[a-z0-9']+|[\u0621-\u064A]+", t)  # latin words keep digits: Arabizi "5alas", "la2"
 
 
 def _drop_phrases(toks, phrases):
@@ -49,12 +56,22 @@ def _drop_phrases(toks, phrases):
 
 
 def says_no(text):
+    if tokens(text) in WHOLE_REPLY_YES:
+        return False
     return any(w in NO_WORDS for w in _drop_phrases(tokens(text), NO_PROBLEM))
+
+
+def blocks_yes(text):
+    """A no / wait word, a condition ("but change...") or a question word: never a yes, whoever judges it."""
+    toks = _drop_phrases(tokens(text), NO_PROBLEM)
+    return says_no(text) or any(w in CONDITIONS or w in QUESTION_WORDS for w in toks)
 
 
 def says_yes(text):
     """Any kind of yes, in any length: a yes word or phrase ("اه والله اطلبه", "sure, go ahead", "ما في مشكلة"),
     unless the message also says no / wait, or asks to change something first ("اه بس شيل الرز")."""
+    if tokens(text) in WHOLE_REPLY_YES and "?" not in text and "؟" not in text:
+        return True
     toks = _drop_phrases(tokens(text), NO_PROBLEM)
     if not toks or any(w in NO_WORDS or w in CONDITIONS or w in QUESTION_WORDS for w in toks):
         return False

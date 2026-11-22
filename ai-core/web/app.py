@@ -200,6 +200,8 @@ def status_text(p):
         return "عم بفكّر…" if d.get("round", 0) == 0 else "شوي كمان…"
     if key == "reply":
         return "عم بكتبلك الرد…"
+    if key == "consent":
+        return "عم بفهم ردّك…"
     if key == "voice":
         return "عم بجهّز الصوت…"
     if key == "tool":
