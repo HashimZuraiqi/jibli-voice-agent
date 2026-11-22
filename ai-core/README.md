@@ -1,4 +1,4 @@
-# Sanad — voice ordering agent: LLM brain + personalization layer
+# Jibli (جيبلي) — voice ordering agent: LLM brain + personalization layer
 
 Older users in Jordan order Careem Quik groceries by voice note; a family member confirms. This part is the **brain**
 (LLM + tools) and the **personalization layer** (memory, repurchase prediction, bandit, uplift offers, guardrails).
@@ -22,10 +22,10 @@ Memory runs on Amazon Bedrock AgentCore Memory. Backup: `MEMORY_PROVIDER=mem0` i
 ## Demo script
 
 1. **Um Khaled** — click *Send proactive reminder*: the layer sees milk, bread and tea running out, LinUCB picks the
-   style, uplift says no discount (she orders anyway), and Sanad sends a Jordanian-Arabic voice note.
-2. Type `اه يا ريت` — her yes is the bandit's reward; Sanad fills the cart and asks Khaled to confirm.
+   style, uplift says no discount (she orders anyway), and Jibli sends a Jordanian-Arabic voice note.
+2. Type `اه يا ريت` — her yes is the bandit's reward; Jibli fills the cart and asks Khaled to confirm.
    Click *Approve* as Khaled → the order is placed and joins her history.
-3. Type `شو بتعرف عني؟` → Sanad lists what it remembers; click × to delete a fact.
+3. Type `شو بتعرف عني؟` → Jibli lists what it remembers; click × to delete a fact.
 4. Type `جوزي ما بوكل سكر، وابني خالد هو اللي بدفع` → AgentCore Memory stores the facts.
    Type `رقمي الوطني 9851234567` → the guardrail refuses to store it (see the log).
 5. Set *Time* to 23:00 and send a reminder → blocked by quiet hours. Send two reminders at 10:00 → the second is blocked.

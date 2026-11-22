@@ -4,7 +4,7 @@ Hackathon project (demo: 2026-11-22). A voice-note ordering agent for Careem Qui
 who order groceries by voice; a family member (e.g. the son who pays) can confirm orders.
 Part of the Jibli repo (`ai-core/` folder, branch `ai-core`); runs standalone with mocked Careem data.
 Research: [How others built the brain and personalization](https://claude.ai/artifact/4en3B857ATsoHiucSRWwxQ) ·
-code docs: [Sanad — Code Documentation](https://claude.ai/artifact/4RW78cQdw1Fa5JvSZRZ263).
+code docs (written when the agent was called Sanad; it is now **Jibli**): [Code Documentation](https://claude.ai/artifact/4RW78cQdw1Fa5JvSZRZ263).
 
 **Our scope: the LLM brain and the personalization layer only.** Speech-to-text and text-to-speech are a teammate's
 part: here the input is the already-transcribed text, and the output is the text a TTS would speak.
