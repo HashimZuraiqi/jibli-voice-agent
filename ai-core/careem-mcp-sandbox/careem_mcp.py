@@ -1,6 +1,7 @@
 """Control the local careem-mcp server (spec/BUILD.md §6).
 
   python careem_mcp.py start | stop | status | logs
+  python careem_mcp.py start --amman              groceries remember the cart (Jordanian catalog, JOD, Amman)
   python careem_mcp.py scenarios [tool]          list scenarios
   python careem_mcp.py scenario <tool> [name]    force a scenario (no name: clear it)
   python careem_mcp.py reset                      clear all forced scenarios
@@ -21,13 +22,25 @@ PORT = int(os.getenv("CAREEM_MCP_PORT", "8787"))
 URL = f"http://127.0.0.1:{PORT}"
 
 
+def alive(pid):
+    """Is the process running? On Windows os.kill(pid, 0) does not check, it TERMINATES the process (it killed the
+    venv launcher and left the real server running with nothing able to stop it), so ask tasklist instead."""
+    if os.name == "nt":
+        out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH", "/FO", "CSV"], capture_output=True, text=True).stdout
+        return f'"{pid}"' in out
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
 def running_pid():
     try:
         pid = int(PID.read_text())
-        os.kill(pid, 0)
-        return pid
     except (OSError, ValueError):
         return None
+    return pid if alive(pid) else None
 
 
 def healthy():
@@ -43,7 +56,8 @@ def start():
         print(f"already running on {URL}/mcp")
         return
     RUN.mkdir(exist_ok=True)
-    proc = subprocess.Popen([sys.executable, str(server.HERE / "server.py"), "--port", str(PORT)],
+    env = dict(os.environ, **({"SANDBOX_WORLD": "amman"} if "--amman" in sys.argv else {}))
+    proc = subprocess.Popen([sys.executable, str(server.HERE / "server.py"), "--port", str(PORT)], env=env,
                             stdout=open(LOG, "a"), stderr=subprocess.STDOUT, start_new_session=True)
     PID.write_text(str(proc.pid))
     for _ in range(50):
@@ -61,7 +75,10 @@ def stop():
     if not pid:
         print("not running")
         return
-    os.kill(pid, signal.SIGTERM)
+    if os.name == "nt":  # /T: also the real interpreter the venv launcher started
+        subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True)
+    else:
+        os.kill(pid, signal.SIGTERM)
     PID.unlink(missing_ok=True)
     print("stopped")
 

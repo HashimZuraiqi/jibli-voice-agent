@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>جيبلي</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --green:#1a8f4c; --green-d:#136b39; --soft:#e8f5ee; --red:#b3261e; --ink:#1b1b1b; --muted:#5f6b63; --amber:#fff4dc; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family: "Segoe UI", Tahoma, "Noto Naskh Arabic", Arial, sans-serif; background:#f4f7f5; color:var(--ink); }
+  .app { max-width:520px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; padding:20px 18px 24px; }
+  h1 { font-size:30px; margin:6px 0 2px; }
+  .sub { font-size:20px; color:var(--muted); margin:0 0 14px; }
+  .log { flex:1; display:flex; flex-direction:column; gap:10px; overflow-y:auto; padding:6px 0 10px; }
+  .msg { max-width:88%; padding:12px 16px; border-radius:18px; font-size:20px; line-height:1.55; }
+  .me { align-self:flex-start; background:#fff; border:1px solid #dfe6e1; }
+  .bot { align-self:flex-end; background:var(--green); color:#fff; }
+  .note { align-self:center; color:var(--muted); font-size:16px; }
+  .card { background:#fff; border-radius:20px; padding:16px; box-shadow:0 2px 10px #0001; margin:8px 0; }
+  .card h2 { font-size:20px; margin:0 0 8px; display:flex; align-items:center; gap:8px; }
+  .row { display:flex; justify-content:space-between; font-size:20px; padding:8px 0; border-bottom:1px solid #eef2ef; }
+  .row:last-of-type { border-bottom:0; }
+  .total { display:flex; justify-content:space-between; font-size:24px; font-weight:700; padding-top:10px; }
+  .yn { display:flex; gap:12px; margin-top:14px; }
+  .yn button { flex:1; font-size:26px; font-weight:700; padding:18px 8px; border-radius:18px; cursor:pointer; }
+  .yes { background:var(--green); color:#fff; border:0; }
+  .no { background:#fff; color:var(--red); border:3px solid var(--red); }
+  .yn small { display:block; font-size:15px; font-weight:400; margin-top:2px; }
+  .hint { text-align:center; color:var(--muted); font-size:16px; margin-top:8px; }
+  .wait { background:var(--soft); }
+  .done { background:var(--soft); text-align:center; font-size:22px; }
+  .declined { background:var(--amber); text-align:center; font-size:22px; }
+  .mic-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; margin:10px 0 6px; }
+  .mic { width:170px; height:170px; border-radius:50%; border:0; background:var(--green); color:#fff; cursor:pointer;
+         box-shadow:0 0 0 14px var(--soft), 0 6px 18px #0003; display:flex; align-items:center; justify-content:center; }
+  .mic svg { width:72px; height:72px; }
+  .mic.rec { background:var(--red); box-shadow:0 0 0 14px #f9dedc, 0 6px 18px #0003; animation:pulse 1.2s infinite; }
+  .mic:disabled { background:#9bb8a6; cursor:wait; }
+  @keyframes pulse { 50% { box-shadow:0 0 0 22px #f9dedc, 0 6px 18px #0003; } }
+  .status { font-size:24px; font-weight:700; color:var(--green-d); min-height:32px; }
+  .replay { background:none; border:0; color:var(--green-d); font-size:17px; cursor:pointer; }
+  form { display:flex; gap:8px; margin-top:10px; }
+  input { flex:1; font-size:19px; padding:14px; border-radius:14px; border:1px solid #cfd8d2; }
+  form button { font-size:18px; padding:0 18px; border-radius:14px; border:0; background:var(--green-d); color:#fff; cursor:pointer; }
+  .typed-label { font-size:15px; color:var(--muted); margin-top:10px; }
+  .err { color:var(--red); }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1 id="hello">هلا 👋</h1>
+  <p class="sub">شو بدك نجيبلك اليوم؟</p>
+
+  <div class="log" id="log" aria-live="polite"></div>
+  <div id="cards"></div>
+
+  <div class="mic-wrap">
+    <button class="mic" id="mic" aria-label="اضغطي واحكي">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/></svg>
+    </button>
+    <div class="status" id="status">اضغطي واحكي</div>
+    <button class="replay" id="replay" hidden>↻ إعادة القراءة</button>
+  </div>
+
+  <div class="typed-label">أو اكتبي:</div>
+  <form id="typed">
+    <input id="text" placeholder="مثلاً: ابعتلي خبز وحليب وبيض" autocomplete="off">
+    <button>إرسال</button>
+  </form>
+</div>
+
+<script>
+const USER = decodeURIComponent(location.pathname.split("/").filter(Boolean).pop());
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const money = (v, cur) => v == null ? "" : `${Number(v).toFixed(2).replace(/\.00$/, "")} ${cur === "AED" ? "درهم" : cur === "JOD" ? "دينار" : (cur || "")}`;
+let lastReply = null, busy = false, lastView = null, wasWaiting = false;
+const nm = (v, n) => (v && v.names && v.names[n]) || n || "";  // Arabic name (stored names are English)
+const DONE = `<div class="card done">✅ طلبك بالطريق</div>`;
+
+function add(cls, text) { const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = text;
+  $("log").appendChild(d); $("log").scrollTop = 1e9; }
+
+function play(r) {
+  lastReply = r; $("replay").hidden = !r;
+  if (!r) return;
+  speechSynthesis.cancel();
+  if (r.audio_b64) { new Audio(`data:${r.audio_mime};base64,${r.audio_b64}`).play().catch(() => browserSay(r.reply)); }
+  else browserSay(r.reply);
+}
+// The browser's own voice. Best: Microsoft Edge's online natural Jordanian voices (ar-JO, e.g. "Sana" / "Taim").
+// ?voice=Taim in the URL picks a voice by name.
+function bestArabicVoice() {
+  const all = speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith("ar"));
+  const want = new URLSearchParams(location.search).get("voice");
+  const score = v => (want && v.name.toLowerCase().includes(want.toLowerCase()) ? 100 : 0)
+    + (v.lang.toLowerCase() === "ar-jo" ? 40 : 0)
+    + (/natural|online|neural/i.test(v.name) ? 20 : 0)
+    + (["ar-sy", "ar-lb", "ar-ps"].includes(v.lang.toLowerCase()) ? 10 : 0);  // other Levantine voices
+  return all.sort((a, b) => score(b) - score(a))[0];
+}
+function browserSay(text) {
+  if (!("speechSynthesis" in window) || !text) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text); u.rate = 0.95;
+  const v = bestArabicVoice(); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = "ar-JO";
+  speechSynthesis.speak(u);
+}
+if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => {
+  const v = bestArabicVoice(); if (v) console.log("[voice] speaking with", v.name, v.lang);
+};
+
+function setBusy(b, label) { busy = b; $("mic").disabled = b; $("status").textContent = label || "اضغطي واحكي"; }
+
+async function handle(promise, shownText) {
+  setBusy(true, "لحظة…");
+  try {
+    const res = await promise; const r = await res.json();
+    if (res.status === 503) throw new Error("الصوت مش شغّال هلق، اكتبي طلبك تحت.");
+    if (res.status === 422) throw new Error("ما سمعت شي، جرّبي كمان مرة.");
+    if (!res.ok) throw new Error(r.detail || r.error || res.statusText);
+    if (r.transcript && !shownText) add("me", r.transcript);
+    add("bot", r.reply); play(r);
+    const v = r.waiting;
+    // her own yes placed it: the reply already said so; show the card, and don't let poll() announce it again
+    if (wasWaiting && v && !v.waiting && v.last && v.last.kind === "careem_order") { lastView = v; $("cards").innerHTML = DONE; }
+    else render(v);
+    if (v) wasWaiting = v.waiting;
+  } catch (e) { add("note err", "⚠️ " + e.message); }
+  finally { setBusy(false); }
+}
+
+function say(text) { add("me", text);
+  return handle(fetch("/api/say", {method:"POST", headers:{"Content-Type":"application/json"},
+                                   body: JSON.stringify({user_id: USER, text})}), true); }
+
+// ---- recording: tap to start, tap again to stop
+let rec = null, chunks = [];
+// STT_PROVIDER=browser: the browser's own speech recognition (Edge / Chrome, Jordanian Arabic), no install needed.
+// The words go to the same brain as typing (/api/say). Any other provider: record and send the audio to /api/voice.
+let sttMode = "server", recog = null;
+fetch("/api/voice-config").then(r => r.json()).then(c => { sttMode = c.stt; }).catch(() => {});
+const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function browserListen() {
+  if (!Recognition) { add("note err", "⚠️ هالمتصفح ما بيدعم التعرّف على الصوت. افتحي الصفحة بـ Edge أو Chrome، أو اكتبي تحت."); return; }
+  if (recog) { recog.stop(); return; }  // second tap: stop listening
+  speechSynthesis.cancel();
+  recog = new Recognition();
+  recog.lang = new URLSearchParams(location.search).get("lang") || "ar-JO";
+  recog.interimResults = true; recog.continuous = false; recog.maxAlternatives = 1;
+  let finalText = "";
+  recog.onresult = e => {
+    const text = Array.from(e.results).map(r => r[0].transcript).join(" ");
+    $("status").textContent = text || "عم بسمعك…";
+    if (e.results[e.results.length - 1].isFinal) finalText = text;
+  };
+  recog.onerror = e => { if (e.error !== "no-speech" && e.error !== "aborted") add("note err", "⚠️ المايك: " + e.error + " — جربي كمان مرة أو اكتبي تحت."); };
+  recog.onend = () => {
+    recog = null; $("mic").classList.remove("rec");
+    if (finalText.trim()) say(finalText.trim()); else setBusy(false);
+  };
+  recog.start(); $("mic").classList.add("rec"); $("status").textContent = "عم بسمعك… احكي";
+}
+
+$("mic").onclick = async () => {
+  if (busy) return;
+  if (sttMode === "browser") return browserListen();
+  if (rec && rec.state === "recording") { rec.stop(); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+    rec = new MediaRecorder(stream); chunks = [];
+    rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+    rec.onstop = () => {
+      stream.getTracks().forEach(t => t.stop()); $("mic").classList.remove("rec");
+      const blob = new Blob(chunks, {type: rec.mimeType || "audio/webm"});
+      handle(fetch(`/api/voice?user_id=${encodeURIComponent(USER)}`, {method:"POST",
+             headers:{"Content-Type": blob.type || "audio/webm"}, body: blob}));
+    };
+    rec.start(); $("mic").classList.add("rec"); $("status").textContent = "عم بسمعك… اضغطي لما تخلصي";
+  } catch (e) { add("note err", "⚠️ ما قدرت أفتح المايك: " + e.message + " — اكتبي تحت بدل."); }
+};
+$("replay").onclick = () => play(lastReply);
+$("typed").onsubmit = e => { e.preventDefault(); const t = $("text").value.trim(); if (!t || busy) return; $("text").value = ""; say(t); };
+
+// ---- the order card: waiting for her yes, waiting for the family, or done
+function render(v) {
+  if (!v) return; lastView = v;
+  if (v.user) $("hello").textContent = `هلا يا ${v.user.name_ar} 👋`;
+  const items = (v.items || []).map(i => `<div class="row"><span>${esc(i.name)} · ${esc(i.qty)}</span><span>${i.price != null ? esc(money(i.price, v.currency)) : ""}</span></div>`).join("");
+  if (v.waiting && v.asked_user) {
+    $("cards").innerHTML = `<div class="card"><h2>🛒 طلبك</h2>${items || (v.summary ? `<div class="row">${esc(v.summary)}</div>` : "")}
+      <div class="total"><span>المجموع</span><span>${esc(money(v.total, v.currency))}</span></div>
+      <div class="yn"><button class="yes" id="yes">نعم<small>اطلب هلق</small></button>
+                      <button class="no" id="no">لا<small>بدي أغيّر</small></button></div>
+      <div class="hint">أو قولي «آه» أو «لا»${v.confirmer ? ` · أو ${esc(nm(v, v.confirmer))} بيقدر يوافق من تلفونه` : ""}</div></div>`;
+    $("yes").onclick = () => !busy && say("اه");
+    $("no").onclick = () => !busy && say("لا");
+  } else if (v.waiting) {
+    $("cards").innerHTML = `<div class="card wait"><h2>⏳ بنستنى ${esc(nm(v, v.asked))} يوافق</h2>${items}
+      <div class="total"><span>المجموع</span><span>${esc(money(v.total, v.currency))}</span></div></div>`;
+  } else if (!$("cards").querySelector(".done")) $("cards").innerHTML = "";  // keep "on its way" until the next order
+}
+
+// the family can approve from their phone at any moment: keep the card fresh
+let offline = false;
+async function poll() {
+  if (busy) return;  // a reply is on its way; it updates the card itself
+  try {
+    const v = await (await fetch(`/api/family-view/${encodeURIComponent(USER)}`)).json();
+    if (busy) return;
+    if (wasWaiting && !v.waiting && v.last) {  // the family answered from their phone
+      const by = nm(v, v.last.by || v.last.confirmed_by);
+      const declined = v.last.kind === "confirmation_declined";
+      const msg = declined ? `${by || "العيلة"} ما وافق على الطلب، فما انطلب شي. بدك نغيّر إشي؟`
+                           : `تمام، ${by ? `${by} وافق و` : ""}الطلب انبعت. بيوصلك قريب.`;
+      add("bot", msg); browserSay(msg);
+      $("cards").innerHTML = declined ? `<div class="card declined">❌ ما انطلب شي</div>` : DONE;
+    } else render(v);
+    wasWaiting = v.waiting;
+  } catch (e) {  // the app is down or restarting: tell her once, keep retrying
+    if (!offline) { offline = true; $("status").textContent = "⚠️ مش قادر أوصل للتطبيق… عم بحاول"; }
+    return;
+  }
+  if (offline) { offline = false; setBusy(false); }
+}
+poll(); setInterval(poll, 3000);
+speechSynthesis && speechSynthesis.getVoices();
+</script>
+</body>
+</html>

@@ -71,10 +71,13 @@ scripts/                create_agentcore_memory.py (run once), careem_login.py (
 agent/careem.py         Careem MCP for all services (CAREEM_PROVIDER=mcp-all): groceries, food, Box, rides stand-in;
                         the LLM proposes the exact checkout, it runs once after a human yes
 agent/personalization/  repurchase, services (usual ride / Box), bandit, uplift, guardrails, layer
-careem-mcp-sandbox/     local careem-mcp server from Careem's spec + its CLI and acceptance tests
+careem-mcp-sandbox/     local careem-mcp server from Careem's spec + its CLI and acceptance tests;
+                        amman.py = Amman mode (start --amman): grocery tools keep the real cart, Jordanian catalog, JOD
 agent/brain.py          the 7-step loop
 data/                   generate.py → catalog, users, orders, synthetic bandit + uplift logs
 web/app.py, web/index.html   chat page + side panel (memory, due items, bandit choice, offer, guardrail log)
+web/voice.html          elder page /voice/<user>: mic + text box -> /api/voice, /api/say (agent/voice.py: STT/TTS)
+web/family.html         family page /family/<user>: /api/family-view + /api/family (approve / decline)
 tests/                  personalization tests, no LLM needed
 state/                  runtime state (Mem0/Qdrant, bandit pickle, carts); git-ignored, delete to reset
 ```
@@ -93,5 +96,6 @@ state/                  runtime state (Mem0/Qdrant, bandit pickle, carts); git-i
   It proposes the exact call with `request_confirmation`; `CareemTools.execute_pending` runs it once after the user's
   clear yes (later message) or the family's approval, and never retries a failed checkout.
 - A new cart or quote cancels a pending confirmation only for the same service.
-- Spend cap per currency (`SPEND_CAPS`: 30 JOD, 150 AED). The sandbox world is Dubai / AED; production in Amman is JOD.
+- Spend cap per currency (`SPEND_CAPS`: 50 JOD, 259 AED, about 50 JOD each). The sandbox world is Dubai / AED; production in Amman is JOD.
+- Confirmation asked of the user: she OR an allowed family member can confirm, whoever is first (`guardrails.may_answer`); asked of a family member: only them.
 - With `CAREEM_PROVIDER=mcp-all`, start the sandbox before the app: `.venv/bin/python careem-mcp-sandbox/careem_mcp.py start`.

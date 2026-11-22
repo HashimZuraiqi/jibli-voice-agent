@@ -26,6 +26,8 @@ def sandbox_note():
     url = os.getenv("CAREEM_MCP_URL", "")
     if os.getenv("CAREEM_PROVIDER", "mock").lower() != "mcp" or not any(h in url for h in ("127.0.0.1", "localhost")):
         return ""
+    if os.getenv("SANDBOX_WORLD", "dubai").lower() == "amman":
+        return ""  # Amman mode: the sandbox builds the cart she asked for, so differences are real again
     return ("\n\nTest mode: this is Careem's MCP sandbox, which answers with a fixed test basket. After "
             "cart_get_basket_price, read back exactly what the priced basket contains (items, quantities, total, address) "
             "in one short sentence and ask for a yes. Do not point out differences from what the user asked for and do "
@@ -35,13 +37,16 @@ def sandbox_note():
 # how to confirm depends on the Careem path: careem.py (mcp-all) proposes the exact checkout; careem_mcp.py (mcp)
 # and the mocks only take who confirms, and the checkout is built from the priced basket by the gate
 CONFIRM_ALL = ("- Nothing is ordered or booked until it is confirmed: call request_confirmation with the exact checkout_tool, "
-               "checkout_args, total and a one-line summary, by the user or by the family member who usually confirms; then stop "
-               "and wait. Only call place_order when the user has just said yes. Never retry a failed checkout on your own; tell "
+               "checkout_args, total and a one-line summary; then stop and wait. Ask the user herself (by='user') by default: then "
+               "she can say yes, or the family member who usually confirms can approve in their app, whoever is first. Ask only "
+               "the family member when the user asks for that or a tool says the family must approve. Only call place_order when the user has just said yes. Never retry a failed checkout on your own; tell "
                "the user what went wrong.")
 CONFIRM_GROCERY = ("- Nothing is ordered until it is confirmed: get the basket price first, then call request_confirmation and stop "
-                   "and wait. Ask the user herself (by='user') by default; ask the family member who usually confirms only when the "
-                   "user asks for that or a tool says the family must approve. Only call place_order when the user has just said "
-                   "yes; a family member approves in their own app. Never retry a failed checkout on your own.")
+                   "and wait. Ask the user herself (by='user') by default: then she can say yes, or the family member who "
+                   "usually confirms can approve in their app, whoever is first (say this in a few words). Ask only the family "
+                   "member (by=<their name>) when the user asks for that or a tool says the family must approve. Only call "
+                   "place_order when the user has just said yes; a family member approves in their own app. Never retry a "
+                   "failed checkout on your own.")
 
 
 def prompt(file, **kw):
@@ -100,8 +105,17 @@ class Brain:
         pending = self.store.state["pending"].get(user_id)
         if pending and pending.get("tool"):
             lines.append(f"- waiting for {pending['by']} to approve: {pending['summary']} ({pending['total']} {pending['currency']})")
-        elif pending:
+        elif pending and "total_jod" in (pending.get("cart") or {}):  # mock cart
             lines.append(f"- waiting for {pending['by']} to approve: {pending['cart']['total_jod']} JOD")
+        elif pending:  # Careem MCP grocery basket (CAREEM_PROVIDER=mcp): Careem's own total and currency
+            from .careem_mcp import CareemMCPTools as M
+            cart = pending.get("cart") or {}
+            lines.append(f"- waiting for {pending['by']} to approve: Quik groceries basket ({M.total(cart)} {M.currency(cart)})")
+        # Careem MCP grocery orders (else the agent never hears that the family already approved and asks again)
+        for o in list((self.store.state.get("mcp", {}).get(user_id) or {}).get("done", {}).values())[-3:][::-1]:
+            cur = (o.get("careem") or {}).get("currency")
+            lines.append(f"- groceries placed {o['ts'].replace('T', ' ')}, approved by {o['confirmed_by']}: "
+                         f"Quik basket ({o.get('total')}{' ' + cur if cur else ''})")
         for o in [o for o in self.store.state.get("service_orders", []) if o["user_id"] == user_id][-3:][::-1]:
             lines.append(f"- {o['service']} {'placed' if o['ok'] else 'FAILED'} {o['ts'].replace('T', ' ')}, approved by "
                          f"{o['confirmed_by']}: {o['summary']} ({o['total']} {o['currency']})")

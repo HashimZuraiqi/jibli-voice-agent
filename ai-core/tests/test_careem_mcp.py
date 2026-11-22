@@ -215,3 +215,53 @@ def test_sandbox_note_only_on_local_sandbox(monkeypatch):
     assert "fixed test basket" in sandbox_note()
     monkeypatch.setenv("CAREEM_MCP_URL", "https://mcp.careemapis.com/mcp")
     assert sandbox_note() == ""  # production: the agent must still point out real differences
+
+
+def test_her_yes_or_khaled_whoever_is_first(tmp_path):
+    # asked of her: Khaled's approve also works (first one wins, once)
+    store, fake, tools = setup(tmp_path)
+    build_cart(tools)
+    r = tools.run("request_confirmation", {"by": "user"}, ctx(1))
+    assert "can also approve" in r["note"]
+    assert tools.family_checkout("um_khaled", "Khaled", NOW)["status"] == "ordered"
+    assert "error" in tools.run("place_order", {"confirmed_by": "user"}, ctx(2, "اه"))  # her later yes can't order again
+    assert len(checkouts(fake)) == 1
+    # asked of her: her own yes works too
+    store, fake, tools = setup(tmp_path / "b")
+    build_cart(tools)
+    tools.run("request_confirmation", {"by": "user"}, ctx(1))
+    assert tools.run("place_order", {"confirmed_by": "user"}, ctx(2, "اه"))["status"] == "ordered"
+    assert tools.family_checkout("um_khaled", "Khaled", NOW)["status"] == "blocked"  # nothing pending any more
+    assert len(checkouts(fake)) == 1
+
+
+def test_asked_of_khaled_only_khaled(tmp_path):
+    store, fake, tools = setup(tmp_path)
+    build_cart(tools)
+    tools.run("request_confirmation", {"by": "Khaled"}, ctx(1))
+    assert "BLOCKED" in tools.run("place_order", {"confirmed_by": "user"}, ctx(2, "اه"))["error"]
+    assert tools.family_checkout("um_khaled", "Abu Khaled", NOW)["status"] == "blocked"  # not allowed to confirm
+    assert tools.family_checkout("um_khaled", "Khaled", NOW)["status"] == "ordered"
+
+
+def test_orders_text_handles_mcp_baskets_and_orders(tmp_path):
+    """Live run: a pending MCP basket has no total_jod, so every chat turn while waiting crashed (HTTP 500),
+    and orders placed through MCP never reached the prompt, so after Khaled approved the agent asked her again."""
+    from types import SimpleNamespace
+    from agent.brain import Brain
+    store, fake, tools = setup(tmp_path, total=45.5, currency="AED")
+    build_cart(tools)
+    tools.run("request_confirmation", {"by": "Khaled"}, ctx(1))
+    me = SimpleNamespace(store=store)
+    assert "waiting for Khaled to approve: Quik groceries basket (45.5 AED)" in Brain.orders_text(me, "um_khaled")
+    assert tools.family_checkout("um_khaled", "Khaled", NOW)["status"] == "ordered"
+    text = Brain.orders_text(me, "um_khaled")
+    assert "waiting" not in text and "groceries placed 2026-11-22 12:00, approved by Khaled: Quik basket (45.5" in text
+
+
+def test_single_item_basket_uses_basket_total_not_item_price():
+    one = {"basket": {"id": 7, "items": [{"title_localized": "Milk", "count": 1, "price": {"total": 13.5}}]},
+           "price": {"total": 19.0}}
+    assert CareemMCPTools.total(one) == 19.0
+    assert CareemMCPTools.total({"price": {"price": {"total": 45.5}}}) == 45.5
+    assert CareemMCPTools.total({"total": 4.25}) == 4.25

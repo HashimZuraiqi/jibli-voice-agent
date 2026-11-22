@@ -31,6 +31,39 @@ Memory runs on Amazon Bedrock AgentCore Memory. Backup: `MEMORY_PROVIDER=mem0` i
 5. Set *Time* to 23:00 and send a reminder → blocked by quiet hours. Send two reminders at 10:00 → the second is blocked.
 6. **Hajjeh Fatima** (new user) — cold start: no history, suggestions from similar users, and uplift gives her an offer.
 
+## Voice page and family page (demo)
+
+- **Elder:** http://127.0.0.1:8000/voice/um_khaled — one big mic button (tap to talk, tap to stop), the reply is
+  spoken back, big نعم / لا when an order waits for her, and a text box ("speak it or type it, same agent").
+- **Family:** http://127.0.0.1:8000/family/um_khaled — open on Khaled's phone: the basket and total waiting for
+  approval, وافق / رفض. When the agent asks her, she OR Khaled can confirm, whoever is first (placed once).
+- Speech: `STT_PROVIDER` / `TTS_PROVIDER` in `.env` (see `.env.example`). Quickest working mic: `STT_PROVIDER=browser`
+  (Edge/Chrome speech recognition in Jordanian Arabic, no install, needs internet; `?lang=ar-SA` to change). Anas's functions plug in without code changes:
+  `STT_PROVIDER=func`, `STT_FUNC=stt.anas:stt` (`stt(audio_bytes) -> text`), `TTS_PROVIDER=func`,
+  `TTS_FUNC=stt.anas:tts` (`tts(text) -> audio_bytes`). Without them: local Whisper (`pip install openai-whisper`
+  + ffmpeg) and the browser's own Arabic voice. **Open the voice page in Microsoft Edge**: it has online natural
+  Jordanian voices (ar-JO), which the page prefers; `?voice=Taim` picks one by name. Amazon Polly is blocked for the
+  event's AWS role (AccessDenied), so don't use `TTS_PROVIDER=polly` there.
+- Levantine voice option: **Leva-TTS** runs as its own small server in a separate venv (`stt/leva_server.py`, setup in
+  its header), then `TTS_PROVIDER=func`, `TTS_FUNC=stt.leva:tts`. Weights are non-commercial: demo only. If the
+  server is down, the page falls back to the browser voice. The recording is never stored.
+- The phone must reach the laptop: use the laptop's LAN IP (`--host 0.0.0.0`). Browsers only allow the mic on
+  http://localhost or https, so run the elder page on the laptop itself.
+
+## Demo sandbox: Amman mode
+
+Careem's sandbox always returns the same Dubai test basket in AED. For the demo, run the in-repo sandbox in Amman
+mode: the grocery tools build the cart she actually asked for from Jibli's Jordanian catalog (`data/catalog.json`),
+priced in JOD, delivered to an Amman address. Same tool names and response shapes; nothing is ever ordered.
+
+```bash
+.venv/bin/python careem-mcp-sandbox/careem_mcp.py stop            # if another sandbox is on :8787
+.venv/bin/python careem-mcp-sandbox/careem_mcp.py start --amman
+```
+`.env`: `CAREEM_PROVIDER=mcp`, `CAREEM_MCP_URL=http://127.0.0.1:8787/mcp`, `SANDBOX_WORLD=amman`, and remove
+`CAREEM_LAT`/`CAREEM_LNG` (the Amman address comes from `user_info`). Pitch line: "Careem's MCP tools on a local
+sandbox built from Careem's spec, with our Amman test data".
+
 ## Real Careem MCP
 
 - **Sandbox (build + test, never orders):** build it once from https://builders.careem.com/sandbox/careem-mcp-sandbox.zip
