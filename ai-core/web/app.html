@@ -472,7 +472,8 @@ function play(r) {
   if ("speechSynthesis" in window) speechSynthesis.cancel();
   speaking(true);
   const done = () => speaking(false);
-  if (r.audio_b64) { const a = new Audio(`data:${r.audio_mime};base64,${r.audio_b64}`); a.onended = done; a.play().catch(() => browserSay(r.reply)); }
+  if (r.audio_b64) { const a = new Audio(`data:${r.audio_mime};base64,${r.audio_b64}`); a.onended = done;
+    a.play().catch(e => { console.warn("[voice] server audio could not play, using the browser voice:", e); browserSay(r.reply); }); }
   else browserSay(r.reply);
 }
 function bestArabicVoice() {
@@ -490,7 +491,7 @@ function browserSay(text) {
 }
 async function speakLine(text) {
   try { const r = await (await post("/api/speak", {user_id:USER, text})).json(); play({reply:text, audio_b64:r.audio_b64, audio_mime:r.audio_mime}); }
-  catch (e) { browserSay(text); }
+  catch (e) { console.warn("[voice] /api/speak failed, using the browser voice:", e); browserSay(text); }
 }
 function add(cls, text) { $("starter").style.display = "none"; const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = text; $("log").appendChild(d);
   $("voice").scrollTo({top:1e6, behavior:"smooth"}); return d; }
@@ -655,7 +656,15 @@ async function enterHome() {
 $("home-mic").onclick = () => go("voice"); $("tile-quik").onclick = () => go("voice"); $("home-why").onclick = () => openWhy();
 
 // ---------------- 1. lock screen: the real reminder (POST /api/reminder), banner expands into Jibli
-let reminderText = null, reminderLoading = false;
+let reminderText = null, reminderLoading = false, reminderAudio = null;
+// Leva needs a few seconds per sentence: make the reminder's audio while the banner is on screen, so the tap plays
+// it at once and inside the tap (a sound started seconds after a tap can be blocked, which fell back to the browser voice)
+function prefetchReminderAudio() {
+  const text = reminderText; reminderAudio = null;
+  if (!text) return;
+  post("/api/speak", {user_id:USER, text}).then(r => r.json())
+    .then(r => { if (reminderText === text) reminderAudio = r; }).catch(e => console.warn("[voice] reminder audio failed:", e));
+}
 async function enterLock() {
   $("banner").classList.remove("show"); $("lock-wait").style.display = "";
   if (reminderText) return showBanner();
@@ -677,11 +686,14 @@ function showBanner() {
   const items = ((S && S.advice.running_out) || []).map(shortName);
   $("banner-title").textContent = items.length ? `${items[0]} قرّب يخلص` : "جيبلي";
   $("banner-text").textContent = reminderText; $("banner").classList.add("show");
+  if (!reminderAudio) prefetchReminderAudio();
 }
 $("banner").onclick = async () => {
+  const first = !$("log").children.length && reminderText, ready = reminderAudio && reminderAudio.audio_b64;
+  if (first && ready) play({reply: reminderText, audio_b64: reminderAudio.audio_b64, audio_mime: reminderAudio.audio_mime});
   await fly($("banner"), FULL(), "var(--bg)");
   go("voice", {instant:true});
-  if (!$("log").children.length && reminderText) { add("bot", reminderText); speakLine(reminderText); }
+  if (first) { add("bot", reminderText); if (!ready) speakLine(reminderText); }  // audio not made yet: fetch it now
 };
 
 // ---------------- 3. voice screen
@@ -855,7 +867,7 @@ document.addEventListener("keydown", e => { if (e.target.tagName === "INPUT") re
 let taps = 0; $("sb").addEventListener("click", () => { taps++; clearTimeout($("sb").t); $("sb").t = setTimeout(() => taps = 0, 600); if (taps >= 3) { taps = 0; toggleDemo(); } });
 $("demo").addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) { e.stopPropagation(); go(b.dataset.go); } });
 $("d-close").onclick = () => toggleDemo(false);
-$("d-remind").onclick = () => { reminderText = null; go("lock"); enterLock(); };
+$("d-remind").onclick = () => { reminderText = null; reminderAudio = null; go("lock"); enterLock(); };
 if (new URLSearchParams(location.search).has("demo")) toggleDemo(true);
 
 setInterval(() => ["voice", "family"].includes(current) && pollView(), 2500);
