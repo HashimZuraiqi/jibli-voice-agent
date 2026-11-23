@@ -1,6 +1,6 @@
 """Speech in and out for the voice page. Swappable from .env so Anas's functions drop in without code changes.
 
-STT_PROVIDER  = whisper (default: local openai-whisper, WHISPER_MODEL=small, Arabic)
+STT_PROVIDER  = whisper (default: local openai-whisper, WHISPER_MODEL=large-v2, Arabic)
               | func    (STT_FUNC=module:function, e.g. stt.anas:stt -> stt(audio_bytes) -> text;
                          a second `mime` parameter is passed if the function takes one)
               | browser (the page uses the browser's own speech recognition, Edge/Chrome, ar-JO; no install,
@@ -58,7 +58,7 @@ def transcribe(audio: bytes, mime: str = "audio/webm") -> str:
     except ImportError as e:
         raise NoSTT("openai-whisper is not installed (pip install openai-whisper, plus ffmpeg), "
                     "or set STT_PROVIDER=func / none") from e
-    name = os.getenv("WHISPER_MODEL", "small")
+    name = os.getenv("WHISPER_MODEL", "large-v2")
     if name not in _whisper:
         _whisper[name] = whisper.load_model(name)
     ext = {"audio/webm": ".webm", "audio/ogg": ".ogg", "audio/wav": ".wav", "audio/mp4": ".m4a",
