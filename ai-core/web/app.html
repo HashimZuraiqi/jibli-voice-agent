@@ -286,7 +286,6 @@ canvas.wave { width:260px; height:44px; transition:opacity .3s; } canvas.wave.id
       <button class="tile" id="tile-quik"><span class="ic">🛒</span>كويك<span class="en-sub">Quik</span></button>
       <button class="tile"><span class="soon">قريباً</span><span class="ic">🚗</span>مشاوير<span class="en-sub">Rides</span></button>
       <button class="tile"><span class="ic">💳</span>باي<span class="en-sub">Pay</span></button>
-      <button class="tile"><span class="ic">📦</span>بوكس<span class="en-sub">Box</span></button>
       <button class="tile" data-go="memory"><span class="ic">🧠</span>ذاكرتي<span class="en-sub">My memory</span></button>
       <button class="tile" data-go="settings"><span class="ic">⚙️</span>مين بيأكّد<span class="en-sub">Who confirms</span></button>
       <button class="tile" data-go="lock"><span class="ic">🔔</span>إشعار<span class="en-sub">Reminder</span></button>
@@ -395,6 +394,25 @@ const fmt = n => AR.format(n).replace(/[\u061C\u200E\u200F]/g, "");  // drop bid
 const ar = n => n == null ? "—" : fmt(n);
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const money = (v, cur) => v == null ? "" : `${ar(Number(v))} ${cur === "AED" ? "درهم" : cur === "JOD" ? "دينار" : (cur || "دينار")}`;
+// Demo clock: ?time=2026-11-23T17:30 (or ?time=17:30 for today) makes the whole app act at that moment, so a habit
+// like "Hashim's Monday 17:00 ride to the gym" shows up on stage whatever the real time is. Every /api call carries it.
+const DEMO_TIME = new URLSearchParams(location.search).get("time");
+if (DEMO_TIME) {
+  const realFetch = window.fetch.bind(window);
+  window.fetch = (url, opts = {}) => {
+    if (typeof url === "string" && url.startsWith("/api/")) {
+      const isJson = opts.body && typeof opts.body === "string" && /json/.test((opts.headers || {})["Content-Type"] || "");
+      if (isJson) { try { const b = JSON.parse(opts.body); if (b && typeof b === "object" && !b.time) opts = {...opts, body: JSON.stringify({...b, time: DEMO_TIME})}; } catch (e) {} }
+      else url += (url.includes("?") ? "&" : "?") + "time=" + encodeURIComponent(DEMO_TIME);
+    }
+    return realFetch(url, opts);
+  };
+}
+function demoNow() {
+  if (!DEMO_TIME) return new Date();
+  if (DEMO_TIME.includes("T")) return new Date(DEMO_TIME);
+  const [h, m] = DEMO_TIME.split(":").map(Number), d = new Date(); d.setHours(h, m || 0, 0, 0); return d;
+}
 const post = (url, body) => fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
 const getJ = async url => { const r = await fetch(url); const j = await r.json(); if (!r.ok) throw new Error(j.detail || j.error || r.statusText); return j; };
 const STYLE_AR = {gentle:"لطيف وحنون", practical:"عملي ومختصر", family:"بذكر العيلة", short:"قصير جداً"};
@@ -459,7 +477,7 @@ const FULL = () => ({left:0, top:0, width:$("device").offsetWidth, height:$("dev
 
 // ---------------- clocks
 function tick() {
-  const n = new Date(), t = n.toLocaleTimeString("en-GB", {hour:"numeric", minute:"2-digit"});
+  const n = demoNow(), t = n.toLocaleTimeString("en-GB", {hour:"numeric", minute:"2-digit"});
   $("sb-time").textContent = t; $("lock-clock").textContent = t; $("fam-clock").textContent = t;
   $("lock-date").textContent = n.toLocaleDateString("ar-JO", {weekday:"long", day:"numeric", month:"long"});
 }
@@ -472,7 +490,8 @@ function play(r) {
   if ("speechSynthesis" in window) speechSynthesis.cancel();
   speaking(true);
   const done = () => speaking(false);
-  if (r.audio_b64) { const a = new Audio(`data:${r.audio_mime};base64,${r.audio_b64}`); a.onended = done; a.play().catch(() => browserSay(r.reply)); }
+  if (r.audio_b64) { const a = new Audio(`data:${r.audio_mime};base64,${r.audio_b64}`); a.onended = done;
+    a.play().catch(e => { console.warn("[voice] server audio could not play, using the browser voice:", e); browserSay(r.reply); }); }
   else browserSay(r.reply);
 }
 function bestArabicVoice() {
@@ -490,7 +509,7 @@ function browserSay(text) {
 }
 async function speakLine(text) {
   try { const r = await (await post("/api/speak", {user_id:USER, text})).json(); play({reply:text, audio_b64:r.audio_b64, audio_mime:r.audio_mime}); }
-  catch (e) { browserSay(text); }
+  catch (e) { console.warn("[voice] /api/speak failed, using the browser voice:", e); browserSay(text); }
 }
 function add(cls, text) { $("starter").style.display = "none"; const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = text; $("log").appendChild(d);
   $("voice").scrollTo({top:1e6, behavior:"smooth"}); return d; }
@@ -554,7 +573,9 @@ async function handle(promise, shown) {
     if (r.transcript && !shown) add("me", r.transcript);
     add("bot", r.reply); play(r);
     if (r.waiting) { VIEW = r.waiting; renderBasket(); }
-    if (wasWaiting && VIEW && !VIEW.waiting && VIEW.last && VIEW.last.kind === "careem_order") setTimeout(() => ordered(VIEW.last.by), 900);
+    // placed: a groceries-path event (kind careem_order) or an all-services order record (mcp-all: ok + service, e.g. Hashim's ride)
+    const last = VIEW && VIEW.last, placed = last && (last.kind === "careem_order" || (last.ok && last.service));
+    if (wasWaiting && VIEW && !VIEW.waiting && placed) setTimeout(() => ordered(last.by || last.confirmed_by), 900);
   } catch (e) { add("note err", "⚠️ " + e.message); }
   finally { stopThinking(); setBusy(false); }
 }
@@ -603,13 +624,21 @@ function renderBasket() {
   if (!v.waiting) { if (!box.querySelector(".done")) box.innerHTML = ""; return; }
   const items = (v.items || []).map(i => `<div class="row"><span>${esc(i.name)} <b>× ${ar(i.qty)}</b></span><span>${i.price != null ? esc(money(i.price, v.currency)) : ""}</span></div>`).join("")
                 || (v.summary ? `<div class="row">${esc(v.summary)}</div>` : "");
-  const addr = v.address || (v.summary && /عنوان|البيت|address|Home/i.test(v.summary) ? v.summary : "عنوانك المحفوظ · البيت");
+  // the server sends no address; guessing it from the summary repeated the whole English order summary after 📍 (mcp-all)
+  const addr = v.address || "عنوانك المحفوظ · البيت";
   const mine = v.asked_user && (!SETTINGS || SETTINGS.confirm_mode !== "family");
-  box.innerHTML = `<div class="card basket" id="basket-card"><h3><span>🛒 طلبك من كويك</span><button class="link" style="font-size:15px" data-go="why">ليش؟ · Why?</button></h3>${items}
-    <div class="total"><span>المجموع مع التوصيل</span><span>${esc(money(v.total, v.currency))}</span></div>
-    <div class="addr">📍 ${esc(addr)}</div>
-    ${mine ? `<div class="yn"><button class="btn primary" id="yes">نعم<small>اطلب هلق · Yes</small></button><button class="btn ghost" id="no">لا<small>بدي أغيّر · No</small></button></div>
-      ${v.confirmer && (!SETTINGS || SETTINGS.confirm_mode === "either") ? `<div class="en-sub" style="text-align:center;margin-top:8px">أو ${esc(nm(v.confirmer))} بيقدر يوافق من تلفونه، مين ما سبق</div>` : ""}`
+  // a Careem ride (Hashim): no basket, no delivery address, no "Why?" link, no "or <confirmer>" line when he confirms himself
+  const ride = v.tool === "rides_request", leg = ride && /(\w+)\s*->\s*(\w+)/.exec(v.summary || "");
+  const place = x => ({Work: "الشغل", Gym: "الجيم", Home: "البيت"})[x] || x;
+  const head = ride ? `<h3><span>🚗 مشوار كريم</span></h3>${leg ? `<div class="row"><span>${esc(place(leg[1]))} ← ${esc(place(leg[2]))}</span><span>كابتن قريب منك</span></div>` : ""}`
+    : `<h3><span>🛒 طلبك من كويك</span><button class="link" style="font-size:15px" data-go="why">ليش؟ · Why?</button></h3>${items}`;
+  LAST_RIDE = ride ? (leg ? [place(leg[1]), place(leg[2])] : ["", ""]) : null;
+  const other = v.confirmer && v.confirmer !== (v.user && v.user.name) && (!SETTINGS || SETTINGS.confirm_mode === "either");
+  box.innerHTML = `<div class="card basket" id="basket-card">${head}
+    <div class="total"><span>${ride ? "سعر المشوار" : "المجموع مع التوصيل"}</span><span>${esc(money(v.total, v.currency))}</span></div>
+    ${ride ? "" : `<div class="addr">📍 ${esc(addr)}</div>`}
+    ${mine ? `<div class="yn"><button class="btn primary" id="yes">نعم<small>${ride ? "اطلب المشوار · Yes" : "اطلب هلق · Yes"}</small></button><button class="btn ghost" id="no">لا<small>بدي أغيّر · No</small></button></div>
+      ${other ? `<div class="en-sub" style="text-align:center;margin-top:8px">أو ${esc(nm(v.confirmer))} بيقدر يوافق من تلفونه، مين ما سبق</div>` : ""}`
            : `<div class="row" style="justify-content:center">⏳ بنستنى ${esc(nm(v.asked))} يوافق</div><button class="btn soft" style="width:100%" data-go="family">📱 شوف تلفون ${esc(nm(v.asked))}</button>`}</div>`;
   if ($("yes")) { $("yes").onclick = () => !busy && say("اه"); $("no").onclick = () => !busy && say("لا"); }
 }
@@ -655,13 +684,24 @@ async function enterHome() {
 $("home-mic").onclick = () => go("voice"); $("tile-quik").onclick = () => go("voice"); $("home-why").onclick = () => openWhy();
 
 // ---------------- 1. lock screen: the real reminder (POST /api/reminder), banner expands into Jibli
-let reminderText = null, reminderLoading = false;
+let reminderText = null, reminderLoading = false, reminderAudio = null, reminderRide = null;
+// Leva needs a few seconds per sentence: make the reminder's audio while the banner is on screen, so the tap plays
+// it at once and inside the tap (a sound started seconds after a tap can be blocked, which fell back to the browser voice)
+function prefetchReminderAudio() {
+  const text = reminderText; reminderAudio = null;
+  if (!text) return;
+  post("/api/speak", {user_id:USER, text}).then(r => r.json())
+    .then(r => { if (reminderText === text) reminderAudio = r; }).catch(e => console.warn("[voice] reminder audio failed:", e));
+}
 async function enterLock() {
   $("banner").classList.remove("show"); $("lock-wait").style.display = "";
   if (reminderText) return showBanner();
   if (reminderLoading) return; reminderLoading = true;
   try {
     const r = await (await post("/api/reminder", {user_id:USER})).json();
+    // blocked (already reminded today) answers have no "ride", but if a usual ride is due now, today's reminder was that
+    // ride: keep its title instead of falling back to the grocery "running out" title (it said «حمص قرّب يخلص» for Hashim)
+    reminderRide = r.ride || (!r.reply && r.advice && r.advice.usual_ride) || null;
     if (r.reply) reminderText = r.reply;
     else {  // blocked (already reminded today / quiet hours): show the last sentence Jibli said, or the live due items
       const w = await loadWhy().catch(() => null);
@@ -672,16 +712,22 @@ async function enterLock() {
   } catch (e) { reminderText = "شو بدك نجيبلك اليوم؟"; }
   reminderLoading = false; showBanner();
 }
+
+const PLACE_AR = {Work: "الشغل", Gym: "الجيم", Home: "البيت"};
 function showBanner() {
   $("lock-wait").style.display = "none";
   const items = ((S && S.advice.running_out) || []).map(shortName);
-  $("banner-title").textContent = items.length ? `${items[0]} قرّب يخلص` : "جيبلي";
+  $("banner-title").textContent = reminderRide ? `مشوارك ع${PLACE_AR[reminderRide.to] || reminderRide.to} 🚗`
+    : items.length ? `${items[0]} قرّب يخلص` : "جيبلي";
   $("banner-text").textContent = reminderText; $("banner").classList.add("show");
+  if (!reminderAudio) prefetchReminderAudio();
 }
 $("banner").onclick = async () => {
+  const first = !$("log").children.length && reminderText, ready = reminderAudio && reminderAudio.audio_b64;
+  if (first && ready) play({reply: reminderText, audio_b64: reminderAudio.audio_b64, audio_mime: reminderAudio.audio_mime});
   await fly($("banner"), FULL(), "var(--bg)");
   go("voice", {instant:true});
-  if (!$("log").children.length && reminderText) { add("bot", reminderText); speakLine(reminderText); }
+  if (first) { add("bot", reminderText); if (!ready) speakLine(reminderText); }  // audio not made yet: fetch it now
 };
 
 // ---------------- 3. voice screen
@@ -797,7 +843,7 @@ async function decide(approve) {
 }
 
 // ---------------- 8. confirmed -> tracking (simulated timer, labelled as demo)
-let trackTimer = null, ORDER_BY = "";
+let trackTimer = null, ORDER_BY = "", LAST_RIDE = null, TRACK_HTML = null;
 async function ordered(by) {
   ORDER_BY = by ? nm(by) || by : "";
   const bc = $("basket-card");
@@ -805,13 +851,25 @@ async function ordered(by) {
   go("track", {instant: !!bc});
 }
 function enterTrack() {
+  // a ride (Hashim) tracks the captain coming to him, not a Quik delivery
+  const track = $("track"); TRACK_HTML = TRACK_HTML || track.innerHTML;
+  if (track.innerHTML !== TRACK_HTML) track.innerHTML = TRACK_HTML;
+  if (LAST_RIDE) {
+    const [a, b] = LAST_RIDE, t = track.querySelectorAll("#map text");
+    t[0].textContent = "🚗 الكابتن"; t[1].textContent = `📍 ${a}`; $("cap").textContent = "🚗";
+    track.querySelector(".eta > span").innerHTML = 'الكابتن بيوصلك خلال<span class="en-sub">Captain arriving in</span>';
+    const labels = [["الكابتن وافق عالمشوار", "Captain accepted"], ["الكابتن بالطريق لعندك", "On the way to you"],
+                    ["قرّب يوصل", "Almost there"], ["وصل الكابتن! يلا عالمشوار", "Arrived"]];
+    track.querySelectorAll("#steps li").forEach((li, i) => li.innerHTML = `<span class="b">${ar(i + 1)}</span>${labels[i][0]}<span class="en-sub">${labels[i][1]}</span>`);
+  }
   $("track-by").textContent = ORDER_BY ? `وافق ${ORDER_BY} · approved by ${ORDER_BY}` : "";
   const dc = $("done-check"); dc.innerHTML = dc.innerHTML;  // replay the check animation
-  const steps = [...document.querySelectorAll("#steps li")], total = 20, t0 = Date.now(), etaMin = 20;
+  const steps = [...document.querySelectorAll("#steps li")], total = 20, t0 = Date.now(), etaMin = LAST_RIDE ? 4 : 20;
   const pts = [[300, 40], [250, 66], [240, 124], [120, 136], [70, 150]], cap = $("cap"), map = $("map");
   const place = k => { const [x, y] = pts[Math.min(pts.length - 1, k)], w = map.clientWidth / 358, h = map.clientHeight / 180;
                        cap.style.left = `${x * w - 17}px`; cap.style.top = `${y * h - 17}px`; };
   clearInterval(trackTimer); place(0); steps.forEach(s => s.classList.remove("on"));
+  $("eta").textContent = `${String(etaMin).padStart(2, "0")}:00`;  // start value now (04:00 ride), not the 20:00 default for 250 ms
   trackTimer = setInterval(() => {
     const s = (Date.now() - t0) / 1000, k = Math.min(3, Math.floor(s / (total / 3)));
     steps.forEach((li, i) => li.classList.toggle("on", i <= k));
@@ -855,7 +913,7 @@ document.addEventListener("keydown", e => { if (e.target.tagName === "INPUT") re
 let taps = 0; $("sb").addEventListener("click", () => { taps++; clearTimeout($("sb").t); $("sb").t = setTimeout(() => taps = 0, 600); if (taps >= 3) { taps = 0; toggleDemo(); } });
 $("demo").addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) { e.stopPropagation(); go(b.dataset.go); } });
 $("d-close").onclick = () => toggleDemo(false);
-$("d-remind").onclick = () => { reminderText = null; go("lock"); enterLock(); };
+$("d-remind").onclick = () => { reminderText = null; reminderAudio = null; reminderRide = null; go("lock"); enterLock(); };
 if (new URLSearchParams(location.search).has("demo")) toggleDemo(true);
 
 setInterval(() => ["voice", "family"].includes(current) && pollView(), 2500);

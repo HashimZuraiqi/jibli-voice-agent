@@ -389,7 +389,7 @@ def family_view(user_id: str):
         else:  # mcp: Careem basket answer
             total, currency = CareemMCPTools.total(cart or {}), CareemMCPTools.currency(cart or {})
         view.update(waiting=True, asked=p["by"], asked_user=p["by"] == u["name"], since=p.get("ts"),
-                    items=_items(cart), total=total, currency=currency, summary=p.get("summary"))
+                    items=_items(cart), total=total, currency=currency, summary=p.get("summary"), tool=p.get("tool"))
     done = [e for e in st.events(user_id) if e["kind"] in ("careem_order", "confirmation_declined")]
     service = [o for o in st.state.get("service_orders", []) if o["user_id"] == user_id]
     local = st.orders(user_id)

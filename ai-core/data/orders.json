@@ -3563,5 +3563,429 @@
   ],
   "total": 0.85,
   "confirmed_by": "Lina"
+ },
+ {
+  "order_id": "hashim-000",
+  "user_id": "hashim",
+  "ts": "2026-07-26T20:30",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-001",
+  "user_id": "hashim",
+  "ts": "2026-07-29T20:55",
+  "items": [
+   {
+    "item_id": "hummus",
+    "qty": 1
+   }
+  ],
+  "total": 0.85,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-002",
+  "user_id": "hashim",
+  "ts": "2026-08-01T20:52",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-003",
+  "user_id": "hashim",
+  "ts": "2026-08-06T20:15",
+  "items": [
+   {
+    "item_id": "coffee",
+    "qty": 1
+   }
+  ],
+  "total": 3.5,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-004",
+  "user_id": "hashim",
+  "ts": "2026-08-09T20:04",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-005",
+  "user_id": "hashim",
+  "ts": "2026-08-10T20:49",
+  "items": [
+   {
+    "item_id": "hummus",
+    "qty": 1
+   }
+  ],
+  "total": 0.85,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-006",
+  "user_id": "hashim",
+  "ts": "2026-08-16T20:12",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-007",
+  "user_id": "hashim",
+  "ts": "2026-08-22T20:13",
+  "items": [
+   {
+    "item_id": "hummus",
+    "qty": 1
+   }
+  ],
+  "total": 0.85,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-008",
+  "user_id": "hashim",
+  "ts": "2026-08-23T20:43",
+  "items": [
+   {
+    "item_id": "coffee",
+    "qty": 1
+   }
+  ],
+  "total": 3.5,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-009",
+  "user_id": "hashim",
+  "ts": "2026-08-25T20:51",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-010",
+  "user_id": "hashim",
+  "ts": "2026-09-01T20:57",
+  "items": [
+   {
+    "item_id": "hummus",
+    "qty": 1
+   }
+  ],
+  "total": 0.85,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-011",
+  "user_id": "hashim",
+  "ts": "2026-09-02T20:42",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-012",
+  "user_id": "hashim",
+  "ts": "2026-09-09T20:48",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-013",
+  "user_id": "hashim",
+  "ts": "2026-09-11T20:48",
+  "items": [
+   {
+    "item_id": "coffee",
+    "qty": 1
+   }
+  ],
+  "total": 3.5,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-014",
+  "user_id": "hashim",
+  "ts": "2026-09-13T20:57",
+  "items": [
+   {
+    "item_id": "hummus",
+    "qty": 1
+   }
+  ],
+  "total": 0.85,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-015",
+  "user_id": "hashim",
+  "ts": "2026-09-17T20:37",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-016",
+  "user_id": "hashim",
+  "ts": "2026-09-24T20:46",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   },
+   {
+    "item_id": "hummus",
+    "qty": 1
+   }
+  ],
+  "total": 2.05,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-017",
+  "user_id": "hashim",
+  "ts": "2026-09-29T20:04",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-018",
+  "user_id": "hashim",
+  "ts": "2026-09-30T20:07",
+  "items": [
+   {
+    "item_id": "coffee",
+    "qty": 1
+   }
+  ],
+  "total": 3.5,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-019",
+  "user_id": "hashim",
+  "ts": "2026-10-05T20:35",
+  "items": [
+   {
+    "item_id": "hummus",
+    "qty": 1
+   }
+  ],
+  "total": 0.85,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-020",
+  "user_id": "hashim",
+  "ts": "2026-10-06T20:30",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-021",
+  "user_id": "hashim",
+  "ts": "2026-10-15T20:35",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   },
+   {
+    "item_id": "hummus",
+    "qty": 1
+   }
+  ],
+  "total": 2.05,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-022",
+  "user_id": "hashim",
+  "ts": "2026-10-18T20:52",
+  "items": [
+   {
+    "item_id": "coffee",
+    "qty": 1
+   }
+  ],
+  "total": 3.5,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-023",
+  "user_id": "hashim",
+  "ts": "2026-10-22T20:24",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-024",
+  "user_id": "hashim",
+  "ts": "2026-10-25T20:12",
+  "items": [
+   {
+    "item_id": "hummus",
+    "qty": 1
+   }
+  ],
+  "total": 0.85,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-025",
+  "user_id": "hashim",
+  "ts": "2026-10-28T20:21",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-026",
+  "user_id": "hashim",
+  "ts": "2026-11-02T20:59",
+  "items": [
+   {
+    "item_id": "hummus",
+    "qty": 1
+   }
+  ],
+  "total": 0.85,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-027",
+  "user_id": "hashim",
+  "ts": "2026-11-04T20:09",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-028",
+  "user_id": "hashim",
+  "ts": "2026-11-10T20:56",
+  "items": [
+   {
+    "item_id": "coffee",
+    "qty": 1
+   }
+  ],
+  "total": 3.5,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-029",
+  "user_id": "hashim",
+  "ts": "2026-11-11T20:34",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-030",
+  "user_id": "hashim",
+  "ts": "2026-11-13T20:26",
+  "items": [
+   {
+    "item_id": "hummus",
+    "qty": 1
+   }
+  ],
+  "total": 0.85,
+  "confirmed_by": "Hashim"
+ },
+ {
+  "order_id": "hashim-031",
+  "user_id": "hashim",
+  "ts": "2026-11-16T20:18",
+  "items": [
+   {
+    "item_id": "water",
+    "qty": 1
+   }
+  ],
+  "total": 1.2,
+  "confirmed_by": "Hashim"
  }
 ]

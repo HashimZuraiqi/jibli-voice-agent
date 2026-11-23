@@ -77,6 +77,9 @@ def short(items):
     return ", ".join(f"{p['name_en']} / {p['name_ar']} (usual qty {p.get('usual_qty', 1)}, item_id {p['item_id']})" for p in items) or "nothing"
 
 
+ARABIC_DAYS = ["اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت", "أحد"]  # Monday first, like datetime.weekday()
+
+
 def ride_text(r):
     return f"usually {r['from']} -> {r['to']} by {r['product']} at this time ({r['times']} times)" if r else "none"
 
@@ -108,7 +111,7 @@ class Brain:
         u = self.store.users[user_id]
         offer = (f"{advice['offer']['discount_pct']}% off this order (max {advice['offer']['max_jod']} JOD)"
                  if advice["offer"] else "none")
-        return prompt("system", name=u["name"], name_ar=u["name_ar"], age=u["age"], city=u["city"],
+        text = prompt("system", name=u["name"], name_ar=u["name_ar"], age=u["age"], city=u["city"],
                       now=now.strftime("%A %Y-%m-%d %H:%M"), family=self.family_text(u),
                       memory="\n".join("- " + m["fact"] for m in memory_facts) or "- nothing yet",
                       running_out=short(advice["running_out"]), cold_start=advice["cold_start"],
@@ -119,7 +122,24 @@ class Brain:
                       confirm_rules=(CONFIRM_ALL if hasattr(self.tools, "execute_pending") else CONFIRM_GROCERY)
                       + CONFIRM_MODE_RULES.get(self.store.state.get("settings", {}).get(user_id, {}).get("confirm_mode"), ""),
                       ride=ride_text(advice.get("usual_ride")) if getattr(self.tools, "rides", True) else "rides are not available yet",
-                      box=box_text(advice.get("usual_box")), places=self.places_text()) + sandbox_note() + SPEED_RULE
+                      box=box_text(advice.get("usual_box")), places=self.places_text())
+        return self.only_offered(text) + sandbox_note() + SPEED_RULE
+
+    def all_services(self):
+        """True on CAREEM_PROVIDER=mcp-all (careem.py: groceries, food, Box, rides); else groceries only."""
+        return hasattr(self.tools, "execute_pending")
+
+    def only_offered(self, text):
+        """The groceries path (mcp / mock) has no food, Box or ride tools: don't tell the model about them, so it
+        never offers a Careem Box delivery or a ride it can't do."""
+        if self.all_services():
+            return text
+        drop = ("- Food:", "- Box:", "- Rides:", "- Usual ride at this time:", "- Usual Careem Box delivery:")
+        lines = [l for l in text.split("\n") if not l.startswith(drop)]
+        return "\n".join(l.replace("You can order groceries (Quik), food delivery, Careem Box deliveries (send items by "
+                                    "motorbike, car or van) and Careem rides.",
+                                    "You can order groceries from Careem Quik (only groceries in this app).")
+                         for l in lines)
 
     def places_text(self):
         places = getattr(self.tools, "places", None) or {}
@@ -181,7 +201,8 @@ class Brain:
             if reply:
                 self.layer.feedback(user_id, reply, now)
                 steps.append({"step": "7 learn (reward)", "reminder_style": open_reminder[-1]["style"], "reply": reply})
-                if reply == "yes":
+                waiting = self.store.state["pending"].get(user_id)
+                if reply == "yes" and not (waiting and waiting.get("tool") == "rides_request"):
                     note = ("\nThe user just said yes to your reminder. Prepare what it offered (" + self.reminder_items(advice)
                             + "): build the cart or quote with the tools, get its price, then request_confirmation from the "
                             "user herself (by='user').")
@@ -270,20 +291,52 @@ class Brain:
                  if advice["offer"] and advice["running_out"] else "none, do not mention discounts")
         lang = "Jordanian Arabic dialect" if u["lang"] == "ar" else "Jordanian Arabic with a few English words"
         shown = advice if getattr(self.tools, "rides", True) else dict(advice, usual_ride=None)
-        text = prompt("reminder", name=f"{u['name']} ({u['name_ar']})", items=self.reminder_items(shown),
+        items = self.reminder_items(shown)
+        ride = self.prepare_usual_ride(user_id, now, shown)
+        if ride:
+            items = ride
+        text = prompt("reminder", name=f"{u['name']} ({u['name_ar']})", items=items,
                       style=advice["style"], style_hint=advice["style_hint"], offer=offer,
                       confirmer=u["confirm_by"], lang_rule=lang)
         msg, meta = self.llm.chat([{"role": "system", "content": text}])
         reply = (msg.content or "").strip()
         self.layer.record_reminder(user_id, now, advice)
         self.history.setdefault(user_id, []).append({"role": "assistant", "content": reply})
-        return {"reply": reply, "advice": advice, "model": meta["model"]}
+        r = shown.get("usual_ride") if ride else None  # the demo app titles the lock-screen banner after the ride, not groceries
+        return {"reply": reply, "advice": advice, "model": meta["model"],
+                "ride": {"from": r["from"], "to": r["to"]} if r else None}
 
-    @staticmethod
-    def reminder_items(advice):
+    def prepare_usual_ride(self, user_id, now, advice):
+        """mcp-all with rides: quote the user's usual ride now and ask for the yes in the reminder itself, so a single
+        «اه يلا» books it at a price that was already fixed (it still goes through request_confirmation and every
+        guardrail). Returns the reminder's subject text, or None to remind about groceries as usual."""
+        r = advice.get("usual_ride")
+        if not (r and self.all_services() and getattr(self.tools, "rides", False)):
+            return None
+        ctx = {"user_id": user_id, "now": now, "text": "", "turn": self.turns.get(user_id, 0)}
+        q = self.tools.run("rides_get_quote", {"pickup": r["from"], "dropoff": r["to"], "product": r["product"]}, ctx)
+        quote = next((x for x in (q.get("quotes") or []) if x["product"] == r["product"]), None) if isinstance(q, dict) else None
+        if not quote:
+            return None
+        price, currency = quote.get("price", quote.get("price_aed")), quote.get("currency", "AED")
+        ok = self.tools.run("request_confirmation", {
+            "by": "user", "checkout_tool": "rides_request", "checkout_args": {"quote_id": q["quote_id"], "product": r["product"]},
+            "total": price, "currency": currency, "summary": f"Careem ride {r['from']} -> {r['to']}"}, ctx)
+        if not isinstance(ok, dict) or ok.get("status") != "waiting":
+            return None
+        day = now.strftime("%A")
+        return (f"their usual ride: a Careem ride (say «مشوار كريم», never the product name {r['product']} or «كريم جو») from {r['from']} to {r['to']}, which they take every {day} around "
+                f"this time ({r['times']} times). It is already priced ({price} {currency}, captain {quote.get('eta_min', 4)} "
+                f"minutes away) and waiting only for their yes. Greet them for the time of day, ask if they finished work, "
+                f"and offer to order it, e.g. «مسا الخير {self.store.users[user_id]['name_ar']}، خلصت شغلك؟ بدك أطلبلك من "
+                f"الشغل للجيم، زي كل {ARABIC_DAYS[now.weekday()]}؟». Do not mention groceries. When you book it, call it «مشوار كريم»")
+
+    def reminder_items(self, advice):
         parts = []
         if advice["running_out"]:
             parts.append("groceries running out: " + short(advice["running_out"]))
+        if not self.all_services():  # groceries path: never remind about a Box delivery or a ride it can't do
+            return "; ".join(parts) or "nothing"
         if advice.get("usual_box") and advice["usual_box"]["due"]:
             parts.append("their usual Careem Box delivery: " + box_text(advice["usual_box"]))
         if advice.get("usual_ride"):
